@@ -24,7 +24,7 @@
         "@nanostores/persistent": "^1.3.4",
         "@sandlada/astro-page-meta": "^0.0.1-20260430.f",
         "@sandlada/consts.js": "^0.0.1-20260430.a",
-        "@sandlada/document-context": "^0.0.1-20260430.d",
+        "@sandlada/document-context": "^0.0.1-20260622.a",
         "@sandlada/material-design-css": "^3.0.0-20260611.b",
         "@sandlada/mdc": "^0.1.0-20250909.b",
         "@tailwindcss/vite": "^4.3.1",
@@ -36,6 +36,7 @@
         "nanoid": "^5.1.15",
         "nanostores": "^1.3.0",
         "postcss": "^8.5.15",
+        "rxjs": "^7.8.2",
         "sharp": "^0.35.2",
         "tailwindcss": "^4.3.1",
         "vite": "^7.3.5"

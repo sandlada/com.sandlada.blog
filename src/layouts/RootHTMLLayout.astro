@@ -49,44 +49,8 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
 
         <!-- ThemeConfig will be initialized in local-storage if it not exists. -->
         <script type="module" is:inline>
-            import { Hct } from '@material/material-color-utilities';
             import { ContextSymbol } from '@sandlada/document-context';
-
-            let config
-            try {
-                config = document[ContextSymbol].getThemeConfigFromLocalStorage();
-            } catch {
-                config = {
-                    sourceColorArgb: Hct.from(150, 60, 50).toInt(),
-                    contrastLevel: 0,
-                    variant: 6,
-                    specVersion: '2025',
-                    isErrorPaletteEnabled: false,
-                    isPrimaryPaletteEnabled: false,
-                    isSecondaryPaletteEnabled: false,
-                    isTertiaryPaletteEnabled: false,
-                    isNeutralPaletteEnabled: false,
-                    isNeutralVariantPaletteEnabled: false,
-                    primaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                    secondaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                    tertiaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                    errorPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                    neutralPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                    neutralVariantPaletteArgb: Hct.from(175, 60, 50).toInt(),
-                }
-            } finally {
-                document[ContextSymbol].themeChange({
-                    ...config,
-                    isErrorPaletteEnabled: false,
-                    isPrimaryPaletteEnabled: false,
-                    isSecondaryPaletteEnabled: false,
-                    isTertiaryPaletteEnabled: false,
-                    isNeutralPaletteEnabled: false,
-                    isNeutralVariantPaletteEnabled: false,
-                });
-                document[ContextSymbol].saveThemeConfigToLocalStorage(document[ContextSymbol].themeConfig);
-            }
-
+            document[ContextSymbol].loadThemeConfig('theme-config')
         </script>
 
         <!-- Font changer. -->
@@ -176,7 +140,7 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
 
             class MaterialColorService {
                 static createTheme(args) {
-                    const { contrast = 1, palettes, platform = 'phone', sourceColor, specVersion = '2025', variant } = args;
+                    const { contrast = 1, palettes = {}, platform = 'phone', sourceColor, specVersion = '2025', variant = 2 } = args;
                     const lightScheme = this.createTemplateLightScheme(sourceColor, contrast, variant, platform, specVersion, palettes);
                     const darkScheme = this.createTemplateDarkScheme(sourceColor, contrast, variant, platform, specVersion, palettes);
 
@@ -252,7 +216,7 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
                     timer = null;
                 }
                 timer = setTimeout(() => {
-                    const config = document[ContextSymbol].themeConfig;
+                    const config = document[ContextSymbol].getThemeConfig();
 
                     const theme = MaterialColorService.createTheme({
                         sourceColor: Hct.fromInt(config.sourceColorArgb),
@@ -260,12 +224,12 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
                         variant: parseInt(config.variant),
                         specVersion: config.specVersion,
                         palettes: {
-                            primaryPalette: config.isPrimaryPaletteEnabled ? TonalPalette.fromInt(config.primaryPaletteArgb) : undefined,
-                            secondaryPalette: config.isSecondaryPaletteEnabled ? TonalPalette.fromInt(config.secondaryPaletteArgb) : undefined,
-                            tertiaryPalette: config.isTertiaryPaletteEnabled ? TonalPalette.fromInt(config.tertiaryPaletteArgb) : undefined,
-                            errorPalette: config.isErrorPaletteEnabled ? TonalPalette.fromInt(config.errorPaletteArgb) : undefined,
-                            neutralPalette: config.isNeutralPaletteEnabled ? TonalPalette.fromInt(config.neutralPaletteArgb) : undefined,
-                            neutralVariantPalette: config.isNeutralVariantPaletteEnabled ? TonalPalette.fromInt(config.neutralVariantPaletteArgb) : undefined,
+                            // primaryPalette: config.isPrimaryPaletteEnabled ? TonalPalette.fromInt(config.primaryPaletteArgb) : undefined,
+                            // secondaryPalette: config.isSecondaryPaletteEnabled ? TonalPalette.fromInt(config.secondaryPaletteArgb) : undefined,
+                            // tertiaryPalette: config.isTertiaryPaletteEnabled ? TonalPalette.fromInt(config.tertiaryPaletteArgb) : undefined,
+                            // errorPalette: config.isErrorPaletteEnabled ? TonalPalette.fromInt(config.errorPaletteArgb) : undefined,
+                            // neutralPalette: config.isNeutralPaletteEnabled ? TonalPalette.fromInt(config.neutralPaletteArgb) : undefined,
+                            // neutralVariantPalette: config.isNeutralVariantPaletteEnabled ? TonalPalette.fromInt(config.neutralVariantPaletteArgb) : undefined,
                         },
                     });
                     const tokensCSS = ThemeController.fromColorsToCSS({ theme, cssStyleMode: config.cssStyleMode });
@@ -290,6 +254,9 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
 
                     ThemeController.updateTheme(allCss);
 
+                    console.log('Theme updated.', config.sourceColorArgb);
+
+
                     if (timer !== null) {
                         clearTimeout(timer);
                         timer = null;
@@ -298,13 +265,6 @@ const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoG
             };
 
             document.addEventListener('theme:generate', updateTheme);
-
-            // Init
-            if (document[ContextSymbol].themeConfig.isDark) {
-                document.dispatchEvent(new Event('attr:change-to-dark'));
-            } else {
-                document.dispatchEvent(new Event('attr:change-to-light'));
-            }
 
             // Attach classes to documentElement for easier theming
             document.ThemeController = ThemeController;

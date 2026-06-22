@@ -132,9 +132,9 @@ import { ContextSymbol } from '@sandlada/document-context';
         const neutralVariantPalette = TonalPalette.fromHueAndChroma(sourceColorHct.hue, 5)
         const errorPalette = TonalPalette.fromHueAndChroma(25, 100)
 
-        const specVersion = document[ContextSymbol].themeConfig.specVersion
-        const variant = document[ContextSymbol].themeConfig.variant
-        const contrastLevel = document[ContextSymbol].themeConfig.contrastLevel
+        const specVersion = document[ContextSymbol].getThemeConfig().specVersion
+        const variant = document[ContextSymbol].getThemeConfig().variant
+        const contrastLevel = document[ContextSymbol].getThemeConfig().contrastLevel
 
         const theme = document.MaterialColorService.createTheme({
             sourceColor: sourceColorHct,

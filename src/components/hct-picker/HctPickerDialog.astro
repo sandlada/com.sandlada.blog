@@ -141,18 +141,24 @@ import { ContextSymbol } from '@sandlada/document-context'
 
                 /** Update Config */
                 const paletteArgb = Hct.from(h, c, t).toInt()
-                document[ContextSymbol].themeConfig.sourceColorArgb = paletteArgb
+                document[ContextSymbol].getThemeConfig().sourceColorArgb = paletteArgb
                 const cl = getClSliderValue()
-                document[ContextSymbol].themeConfig.contrastLevel = cl
+                document[ContextSymbol].getThemeConfig().contrastLevel = cl
                 const variant = getVariantSelectValue()
-                document[ContextSymbol].themeConfig.variant = variant
+                document[ContextSymbol].getThemeConfig().variant = variant
                 const specVersion = getSpecVersionSelectValue()
-                document[ContextSymbol].themeConfig.specVersion = specVersion.toString()
+                document[ContextSymbol].getThemeConfig().specVersion = specVersion.toString()
 
                 /** Generation */
                 if(skipThemeGeneration)  return
 
-                document.dispatchEvent(new Event('theme:save-changes'))
+                document[ContextSymbol].updateThemeConfig({
+                    sourceColorArgb: paletteArgb,
+                    contrastLevel: cl,
+                    variant: variant,
+                    specVersion: specVersion.toString()
+                })
+                document[ContextSymbol].saveThemeConfig('theme-config')
                 document.dispatchEvent(new Event('theme:generate'))
 
                 if(timer) {
@@ -216,13 +222,13 @@ import { ContextSymbol } from '@sandlada/document-context'
         })
 
         // Init
-        const sourceColorHctArray = Hct.fromInt(document[ContextSymbol].themeConfig.sourceColorArgb)
+        const sourceColorHctArray = Hct.fromInt(document[ContextSymbol].getThemeConfig().sourceColorArgb)
         hSlider.value = sourceColorHctArray.hue.toString()
         cSlider.value = sourceColorHctArray.chroma.toString()
         tSlider.value = sourceColorHctArray.tone.toString()
-        clSlider.value = document[ContextSymbol].themeConfig.contrastLevel.toString()
-        variantSelect.selectIndex(document[ContextSymbol].themeConfig.variant)
-        specVersionSelect.selectIndex(document[ContextSymbol].themeConfig.specVersion === "2021" ? 0 : 1)
+        clSlider.value = document[ContextSymbol].getThemeConfig().contrastLevel.toString()
+        variantSelect.selectIndex(document[ContextSymbol].getThemeConfig().variant)
+        specVersionSelect.selectIndex(document[ContextSymbol].getThemeConfig().specVersion === "2021" ? 0 : 1)
         updateColor(true)
         updateSliderAndPreviewHiddenAttribute()
     })

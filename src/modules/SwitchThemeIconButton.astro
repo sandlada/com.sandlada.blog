@@ -32,19 +32,12 @@ import LS from '@material-design-icons/svg/round/light_mode.svg?raw'
         }
 
         button.addEventListener('click', () => {
-            if(document[ContextSymbol].themeConfig.isDark) {
-                document.dispatchEvent(new Event('theme:change-to-light'))
-                document.dispatchEvent(new Event('attr:change-to-light'))
-            } else {
-                document.dispatchEvent(new Event('theme:change-to-dark'))
-                document.dispatchEvent(new Event('attr:change-to-dark'))
-            }
-
-            document.dispatchEvent(new Event('theme:save-changes'))
-            updateButtonUI(document[ContextSymbol].themeConfig.isDark)
+            document[ContextSymbol].updateThemeConfig({ isDark: !document[ContextSymbol].getThemeConfig().isDark })
+            document[ContextSymbol].saveThemeConfig()
+            updateButtonUI(document[ContextSymbol].getThemeConfig().isDark)
         })
 
         // Init
-        updateButtonUI(document[ContextSymbol].themeConfig.isDark)
+        updateButtonUI(document[ContextSymbol].getThemeConfig().isDark)
     })
 </script>
