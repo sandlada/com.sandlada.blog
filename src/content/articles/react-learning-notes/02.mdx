@@ -1,0 +1,112 @@
+---
+id: "LxjweVVQLhwDyyYCO0MTO"
+category: "react-learning-notes"
+order: 2
+
+meta:
+    title: "React Learning Day 2: Events"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "event", "bind-event", "synthetic-events"]
+    publishedAt: 2025-8-2
+    createdAt: 2025-8-2
+    updatedAt: 2025-8-2
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+import { Image } from 'astro:assets'
+import ReactEventPng from './react-event.png'
+
+# React Learning Day 2: Events
+
+## Native Events
+
+原生DOM上的事件被稱為原生事件，正式名稱為"Native Events"。Native Event在不同平台的處理機制存在差異。
+
+## Event Delegation
+
+React不會直接管理Native Event，React通過事件委託來管理事件。React會附加事件監聽器到App Root元素，React通過Native Event的DOM樹中的冒泡來觸發React設置在App Root上的事件以模擬Capture和Bubing。
+
+## Synthetic Event
+
+React提供了統一的事件API來消除不同平台的事件實現差異(註冊、合成、派發、冒泡)以實現跨平台的模擬原生DOM事件的能力。這套事件機制被稱為SyntheticEvent。
+
+```typescript
+interface BaseSyntheticEvent<E = object, C = any, T = any> {
+    nativeEvent: E;
+    currentTarget: C;
+    target: T;
+    bubbles: boolean;
+    cancelable: boolean;
+    defaultPrevented: boolean;
+    eventPhase: number;
+    isTrusted: boolean;
+    preventDefault(): void;
+    isDefaultPrevented(): boolean;
+    stopPropagation(): void;
+    isPropagationStopped(): boolean;
+    persist(): void;
+    timeStamp: number;
+    type: string;
+}
+
+interface SyntheticEvent<
+    T = Element,
+    E = Event
+> extends BaseSyntheticEvent<
+    E, EventTarget & T,
+    EventTarget
+> {}
+```
+
+React提供了如下事件類型:
+
+```typescript
+type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }["bivarianceHack"]
+
+type ReactEventHandler<T = Element> = EventHandler<SyntheticEvent<T>>
+
+type ClipboardEventHandler<T = Element> = EventHandler<ClipboardEvent<T>>
+type CompositionEventHandler<T = Element> = EventHandler<CompositionEvent<T>>
+type DragEventHandler<T = Element> = EventHandler<DragEvent<T>>
+type FocusEventHandler<T = Element> = EventHandler<FocusEvent<T>>
+type FormEventHandler<T = Element> = EventHandler<FormEvent<T>>
+type ChangeEventHandler<T = Element> = EventHandler<ChangeEvent<T>>
+type InputEventHandler<T = Element> = EventHandler<InputEvent<T>>
+type KeyboardEventHandler<T = Element> = EventHandler<KeyboardEvent<T>>
+type MouseEventHandler<T = Element> = EventHandler<MouseEvent<T>>
+type TouchEventHandler<T = Element> = EventHandler<TouchEvent<T>>
+type PointerEventHandler<T = Element> = EventHandler<PointerEvent<T>>
+type UIEventHandler<T = Element> = EventHandler<UIEvent<T>>
+type WheelEventHandler<T = Element> = EventHandler<WheelEvent<T>>
+type AnimationEventHandler<T = Element> = EventHandler<AnimationEvent<T>>
+type ToggleEventHandler<T = Element> = EventHandler<ToggleEvent<T>>
+type TransitionEventHandler<T = Element> = EventHandler<TransitionEvent<T>>
+```
+
+以onClick為例。React為click編寫了一個合成事件，名叫`onClick`，其類型為`MouseEventHandler`:
+
+```tsx
+const handleClick: MouseEventHandler<HTMLButtonElement> = (e: MouseEvent<HTMLButtonElement>) => {
+    console.log(e.currentTarget, `clicked.`)
+}
+return (
+    <button onClick={handleClick}>Click me</button>
+)
+```
+
+## 執行順序
+
+<Image src={ReactEventPng} width={900} height={457} alt="這張圖片展示了React事件的執行順序"></Image>

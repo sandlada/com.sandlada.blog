@@ -1,0 +1,51 @@
+---
+import { NavigationLinkRecord } from "./navigation-link"
+
+const links = Object.values(NavigationLinkRecord)
+---
+
+<mdc-navigation-bar quick>
+    {
+        links.map(({ label, activeIcon, inactiveIcon, href }) => (
+            <a href={href} class="tab-wrapper" tabindex="-1">
+                <mdc-navigation-bar-tab name="navigation-bar-group">
+                    {label}
+                    <mdc-icon slot="active-icon" set:html={activeIcon}></mdc-icon>
+                    <mdc-icon slot="inactive-icon" set:html={inactiveIcon}></mdc-icon>
+                </mdc-navigation-bar-tab>
+            </a>
+        ))
+    }
+</mdc-navigation-bar>
+
+<script>
+import "@sandlada/mdc/build/components/navigation-bar/navigation-bar.js";
+import "@sandlada/mdc/build/components/navigation-item/navigation-bar-tab.js";
+</script>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const pathname = location.pathname
+        console.log(pathname);
+
+        /** @type {NodeListOf<HTMLAnchorElement>} */
+        const tabs = document.querySelectorAll(`mdc-navigation-bar a.tab-wrapper`)
+        await new Promise(r => setTimeout(r, 700))
+
+        tabs.forEach(anchor => {
+            if(anchor.getAttribute('href') === pathname) {
+                anchor.querySelector(`mdc-navigation-bar-tab[name="navigation-bar-group"]`)?.setAttribute('checked', '')
+            }
+        })
+    })
+</script>
+
+<style>
+    mdc-navigation-bar {
+        width: 100%;
+    }
+    a.tab-wrapper {
+        border: none;
+        outline: none;
+    }
+</style>

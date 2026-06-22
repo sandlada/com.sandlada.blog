@@ -1,0 +1,354 @@
+---
+import HtmlFontController from '../components/font/HtmlFontController.astro';
+import '../styles/global.css';
+
+interface Props {
+    lang: 'zh-Hans' | 'zh-Hant' | 'en-US' | 'en-GB' | 'zh-TW' | 'zh-CN' | ({} & string);
+    language?: 'simplified-chinese' | 'traditional-chinese' | 'english';
+    font?: 'sans' | 'serif' | ({}&string);
+    autoGenerateTheme?: boolean;
+}
+
+const { font = 'sans', lang = 'zh-Hant', language = 'traditional-chinese', autoGenerateTheme = true } = Astro.props;
+---
+
+<!doctype html>
+<html lang={lang}>
+    <head>
+        <style is:inline>
+            :root:not([dark]) {
+                background: var(--md-sys-color-surface, #fff);
+            }
+            :root[dark] {
+                background: var(--md-sys-color-surface, #000);;
+            }
+
+            :root:not([dark]) {
+                color-scheme: light;
+            }
+            :root[dark] {
+                color-scheme: dark;
+            }
+        </style>
+
+        <!-- Import Modules -->
+        <script is:inline type="importmap">
+            {
+                "imports": {
+                    "@sandlada/document-context": "/vendor/document-context.js",
+                    "@material/material-color-utilities": "/vendor/material-color-utilities.js"
+                }
+            }
+        </script>
+
+        <!-- Inject themeConfig object into document element. -->
+        <script type="module" is:inline>
+            import { enhanceDocument } from '@sandlada/document-context';
+            enhanceDocument();
+        </script>
+
+        <!-- ThemeConfig will be initialized in local-storage if it not exists. -->
+        <script type="module" is:inline>
+            import { Hct } from '@material/material-color-utilities';
+            import { ContextSymbol } from '@sandlada/document-context';
+
+            let config
+            try {
+                config = document[ContextSymbol].getThemeConfigFromLocalStorage();
+            } catch {
+                config = {
+                    sourceColorArgb: Hct.from(150, 60, 50).toInt(),
+                    contrastLevel: 0,
+                    variant: 6,
+                    specVersion: '2025',
+                    isErrorPaletteEnabled: false,
+                    isPrimaryPaletteEnabled: false,
+                    isSecondaryPaletteEnabled: false,
+                    isTertiaryPaletteEnabled: false,
+                    isNeutralPaletteEnabled: false,
+                    isNeutralVariantPaletteEnabled: false,
+                    primaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                    secondaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                    tertiaryPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                    errorPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                    neutralPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                    neutralVariantPaletteArgb: Hct.from(175, 60, 50).toInt(),
+                }
+            } finally {
+                document[ContextSymbol].themeChange({
+                    ...config,
+                    isErrorPaletteEnabled: false,
+                    isPrimaryPaletteEnabled: false,
+                    isSecondaryPaletteEnabled: false,
+                    isTertiaryPaletteEnabled: false,
+                    isNeutralPaletteEnabled: false,
+                    isNeutralVariantPaletteEnabled: false,
+                });
+                document[ContextSymbol].saveThemeConfigToLocalStorage(document[ContextSymbol].themeConfig);
+            }
+
+        </script>
+
+        <!-- Font changer. -->
+        <script type="module" is:inline>
+            /**
+             * @param e {HTMLElementEventMap['font:attribute-change']['detail']['font'] | Font}
+             */
+            const setAttributeToDocumentElement = (font) => {
+                document.documentElement.setAttribute('data-font-style', font);
+            };
+
+            /**
+             * @param e {HTMLElementEventMap['font:attribute-change']}
+             */
+            const handleAttributeChange = (e) => {
+                const font = e.detail.font;
+                setAttributeToDocumentElement(font);
+            };
+
+            document.documentElement.addEventListener('font:attribute-change', handleAttributeChange);
+
+            // Init
+            document.documentElement.dispatchEvent(
+                new CustomEvent('font:attribute-change', {
+                    detail: {
+                        font: 'sans',
+                    },
+                    bubbles: true,
+                    cancelable: false,
+                }),
+            );
+        </script>
+
+        <!-- Material Theme Generator autoGenerateTheme is true. -->
+        <script type="module" is:inline>
+            import { DynamicScheme, Hct, hexFromArgb, TonalPalette } from '@material/material-color-utilities';
+            import { ContextSymbol } from '@sandlada/document-context';
+
+            function toKebabCase(str) {
+                if (!str) return '';
+                return str
+                    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+                    .replace(/[\s_.]+/g, '-')
+                    .toLowerCase()
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+            }
+
+            class ThemeController {
+                static fromPalettesToCSS(palettes) {
+                    return (
+                        ':root{' +
+                        palettes.reduce((p, c) => {
+                            return p + c.palette.reduce((pp, cc) => pp + `--md-sys-palette-${c.name}-${cc.tone}: ${hexFromArgb(cc.color)};`, '');
+                        }, '') +
+                        '}'
+                    );
+                }
+
+                static fromColorsToCSS(args) {
+                    const { cssStyleMode, theme } = args;
+                    const { light, dark } = theme;
+
+                    if (cssStyleMode === 'classic') {
+                        const lightCss = light.reduce((p, c) => p + `--md-sys-color-${toKebabCase(c.name)}: ${hexFromArgb(c.hct.toInt())};`, '');
+                        const darkCss = dark.reduce((p, c) => p + `--md-sys-color-${toKebabCase(c.name)}: ${hexFromArgb(c.hct.toInt())};`, '');
+                        return `:root:not([dark]){${lightCss}}:root[dark]{${darkCss}}`;
+                    } else {
+                        const lightDarkSchemeMap = new Map([]);
+                        light.forEach((c) => {
+                            lightDarkSchemeMap.set(toKebabCase(c.name), [hexFromArgb(c.hct.toInt()).toString(), hexFromArgb(c.hct.toInt()).toString()]);
+                        });
+                        dark.forEach((c) => {
+                            const lightValue = lightDarkSchemeMap.get(toKebabCase(c.name))[0];
+                            lightDarkSchemeMap.set(toKebabCase(c.name), [lightValue, hexFromArgb(c.hct.toInt()).toString()]);
+                        });
+                        return `:root{${[...lightDarkSchemeMap.entries()].reduce((p, [k, v]) => p + `--md-sys-color-${k}: light-dark(${v[0]}, ${v[1]});`, '')}}`;
+                    }
+                }
+
+                static updateTheme(style) {
+                    const sheet = new CSSStyleSheet();
+                    sheet.replaceSync(style);
+                    document.adoptedStyleSheets = [sheet];
+                }
+            }
+
+            class MaterialColorService {
+                static createTheme(args) {
+                    const { contrast = 1, palettes, platform = 'phone', sourceColor, specVersion = '2025', variant } = args;
+                    const lightScheme = this.createTemplateLightScheme(sourceColor, contrast, variant, platform, specVersion, palettes);
+                    const darkScheme = this.createTemplateDarkScheme(sourceColor, contrast, variant, platform, specVersion, palettes);
+
+                    const toResult = (scheme) =>
+                        scheme.colors.allColors.map((color) => ({
+                            name: color.name,
+                            hct: color.getHct(scheme),
+                            palette: color.palette(scheme),
+                        }));
+
+                    return {
+                        light: toResult(lightScheme),
+                        dark: toResult(darkScheme),
+                        palettes: {
+                            primaryPalette: lightScheme.primaryPalette,
+                            secondaryPalette: lightScheme.secondaryPalette,
+                            tertiaryPalette: lightScheme.tertiaryPalette,
+                            errorPalette: lightScheme.errorPalette,
+                            neutralPalette: lightScheme.neutralPalette,
+                            neutralVariantPalette: lightScheme.neutralVariantPalette,
+                        },
+                    };
+                }
+
+                static createTemplateDarkScheme(sourceColor, contrast, variant, platform, specVersion, palettes) {
+                    return new DynamicScheme({
+                        sourceColorHct: sourceColor,
+                        contrastLevel: contrast,
+                        variant,
+                        isDark: true,
+                        specVersion,
+                        platform,
+                        ...(palettes.primaryPalette ? { primaryPalette: palettes.primaryPalette } : {}),
+                        ...(palettes.secondaryPalette ? { secondaryPalette: palettes.secondaryPalette } : {}),
+                        ...(palettes.tertiaryPalette ? { tertiaryPalette: palettes.tertiaryPalette } : {}),
+                        ...(palettes.errorPalette ? { errorPalette: palettes.errorPalette } : {}),
+                        ...(palettes.neutralPalette ? { neutralPalette: palettes.neutralPalette } : {}),
+                        ...(palettes.neutralVariantPalette ? { neutralVariantPalette: palettes.neutralVariantPalette } : {}),
+                    });
+                }
+                static createTemplateLightScheme(sourceColor, contrast, variant, platform, specVersion, palettes) {
+                    return new DynamicScheme({
+                        sourceColorHct: sourceColor,
+                        contrastLevel: contrast,
+                        variant,
+                        isDark: false,
+                        specVersion,
+                        platform,
+                        ...(palettes.primaryPalette ? { primaryPalette: palettes.primaryPalette } : {}),
+                        ...(palettes.secondaryPalette ? { secondaryPalette: palettes.secondaryPalette } : {}),
+                        ...(palettes.tertiaryPalette ? { tertiaryPalette: palettes.tertiaryPalette } : {}),
+                        ...(palettes.errorPalette ? { errorPalette: palettes.errorPalette } : {}),
+                        ...(palettes.neutralPalette ? { neutralPalette: palettes.neutralPalette } : {}),
+                        ...(palettes.neutralVariantPalette ? { neutralVariantPalette: palettes.neutralVariantPalette } : {}),
+                    });
+                }
+            }
+
+            class MaterialPaletteService {
+                static createPalette(args) {
+                    const { palette, tones } = args;
+                    return tones.map((tone) => ({
+                        tone,
+                        color: palette.tone(tone),
+                    }));
+                }
+            }
+
+            let timer = null;
+            const updateTheme = () => {
+                if (timer !== null) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                timer = setTimeout(() => {
+                    const config = document[ContextSymbol].themeConfig;
+
+                    const theme = MaterialColorService.createTheme({
+                        sourceColor: Hct.fromInt(config.sourceColorArgb),
+                        contrast: parseInt(config.contrastLevel),
+                        variant: parseInt(config.variant),
+                        specVersion: config.specVersion,
+                        palettes: {
+                            primaryPalette: config.isPrimaryPaletteEnabled ? TonalPalette.fromInt(config.primaryPaletteArgb) : undefined,
+                            secondaryPalette: config.isSecondaryPaletteEnabled ? TonalPalette.fromInt(config.secondaryPaletteArgb) : undefined,
+                            tertiaryPalette: config.isTertiaryPaletteEnabled ? TonalPalette.fromInt(config.tertiaryPaletteArgb) : undefined,
+                            errorPalette: config.isErrorPaletteEnabled ? TonalPalette.fromInt(config.errorPaletteArgb) : undefined,
+                            neutralPalette: config.isNeutralPaletteEnabled ? TonalPalette.fromInt(config.neutralPaletteArgb) : undefined,
+                            neutralVariantPalette: config.isNeutralVariantPaletteEnabled ? TonalPalette.fromInt(config.neutralVariantPaletteArgb) : undefined,
+                        },
+                    });
+                    const tokensCSS = ThemeController.fromColorsToCSS({ theme, cssStyleMode: config.cssStyleMode });
+                    const palettes = Object.entries(theme.palettes).map(([key, palette]) => ({
+                        name: key.replace('Palette', ''),
+                        palette: MaterialPaletteService.createPalette({
+                            palette,
+                            tones: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+                        }),
+                    }));
+                    const palettesCSS = ThemeController.fromPalettesToCSS(palettes);
+
+                    const keyColors =
+                        `--md-sys-color-primary-key-color:${hexFromArgb(theme.palettes.primaryPalette.keyColor.toInt())};` +
+                        `--md-sys-color-secondary-key-color:${hexFromArgb(theme.palettes.secondaryPalette.keyColor.toInt())};` +
+                        `--md-sys-color-tertiary-key-color:${hexFromArgb(theme.palettes.tertiaryPalette.keyColor.toInt())};` +
+                        `--md-sys-color-error-key-color:${hexFromArgb(theme.palettes.errorPalette.keyColor.toInt())};` +
+                        `--md-sys-color-neutral-key-color:${hexFromArgb(theme.palettes.neutralPalette.keyColor.toInt())};` +
+                        `--md-sys-color-neutral-variant-key-color:${hexFromArgb(theme.palettes.neutralVariantPalette.keyColor.toInt())};`;
+
+                    const allCss = (`:root{${keyColors}}` + tokensCSS + palettesCSS).replaceAll('--md', '\n    --md').replaceAll('neutralVariant', 'neutral-variant').replaceAll(':root{', '\n:root{').replaceAll('}', '\n}\n');
+
+                    ThemeController.updateTheme(allCss);
+
+                    if (timer !== null) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                }, 25);
+            };
+
+            document.addEventListener('theme:generate', updateTheme);
+
+            // Init
+            if (document[ContextSymbol].themeConfig.isDark) {
+                document.dispatchEvent(new Event('attr:change-to-dark'));
+            } else {
+                document.dispatchEvent(new Event('attr:change-to-light'));
+            }
+
+            // Attach classes to documentElement for easier theming
+            document.ThemeController = ThemeController;
+            document.MaterialColorService = MaterialColorService;
+            document.MaterialPaletteService = MaterialPaletteService;
+        </script>
+
+        <!-- Init material theme while.  -->
+        {
+            autoGenerateTheme && (
+                <script type="module" is:inline>
+                    document.dispatchEvent(new Event('theme:generate'));
+                </script>
+            )
+        }
+
+        <HtmlFontController language={language}></HtmlFontController>
+
+        <meta lang={lang} />
+        <meta name="language" content={lang} />
+
+        <slot name="before-head" />
+        <slot name="head" />
+        <slot name="after-head" />
+    </head>
+    <body>
+        <slot name="before-body" />
+        <slot name="body" />
+        <slot name="after-body" />
+    </body>
+</html>
+
+<!-- Import MDC Components globally. -->
+<script>
+    import '@sandlada/mdc/build/components/elevation/elevation.js';
+    import '@sandlada/mdc/build/components/focus-ring/focus-ring.js';
+    import '@sandlada/mdc/build/components/icon-button/icon-button.js';
+    import '@sandlada/mdc/build/components/icon/icon.js';
+    import '@sandlada/mdc/build/components/ripple/ripple.js';
+    import '@sandlada/mdc/build/components/dialog/basic-dialog.js';
+    import '@sandlada/mdc/build/components/button/button.js';
+
+    import '@material/web/slider/slider.js';
+    import '@material/web/select/select-option.js';
+    import '@material/web/select/outlined-select.js';
+    import '@material/web/slider/slider.js';
+</script>

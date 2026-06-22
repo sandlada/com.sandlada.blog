@@ -1,0 +1,21 @@
+---
+import PaletteS from '@material-design-icons/svg/round/palette.svg?raw'
+---
+
+<mdc-icon-button id="hct-picker-dialog-toggler">
+    <mdc-icon set:html={PaletteS}></mdc-icon>
+</mdc-icon-button>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+        /**
+         * @type {HTMLButtonElement}
+         */
+        const button = document.getElementById('hct-picker-dialog-toggler')
+
+        button.addEventListener('click', () => {
+            document.dispatchEvent(new Event('hct-picker-dialog:open'))
+        })
+
+    })
+</script>

@@ -1,0 +1,175 @@
+---
+id: "XEziOxkNzFPr3lpC3uSV6"
+category: "react-learning-notes"
+order: 3
+
+meta:
+    title: "React Learning Day 3: useCallback, useMemo, memo"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "stateful", "state", "use-callback", "use-memo", "memo"]
+    publishedAt: 2025-8-3
+    createdAt: 2025-8-3
+    updatedAt: 2025-8-3
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+
+# React Learning Day 3: useCallback, useMemo, memo
+
+memo、useMemo、useCallback、useEffect都有"依賴改變後重建"的特點。
+
+## useCallback
+
+useCallback根據依賴項的狀態改變與否來決定新函數實例的創建與否。
+
+useCallback類型如下:
+
+```typescript
+type DependencyList = readonly unknown[]
+function useCallback<T extends Function>(callback: T, deps: DependencyList): T
+```
+
+與useEffect參數列表相似，但不同的，依賴項必須提供。
+
+如下代碼展示了useCallback在有依賴和無依賴(依賴項為`[]`)的區別:
+
+```tsx
+const [name, setName] = useState('c')
+
+// 總是在name更新後創建新函數
+const getName = useCallback(() => name, [name])
+
+// 總是得到最初的初始函數，因為依賴為空
+const getInitialName = useCallback(() => name, [])
+
+// 在getName每次被創建為新函數後運行
+useEffect(() => { console.log('getName updated') }, [getName])
+
+// 僅運行一次
+useEffect(() => { console.log('getInitialName updated') }, [getInitialName])
+
+return (
+    <>
+        <p>{getName()}</p>
+        <p>{getInitialName()}</p>
+        <button onClick={() => setName(e => e + '+')}>Append +</button>
+    </>
+)
+```
+
+## useMemo
+
+useMemo類似useCallback，不同的是，useCallback記憶函數，useMemo記憶值。
+
+useMemo類型如下:
+
+```typescript
+type DependencyList = readonly unknown[]
+function useMemo<T>(factory: () => T, deps: DependencyList): T
+```
+
+useMemo接受一個返回值的函數和依賴項數組。僅當依賴項改變後重新計算值。
+
+如下代碼展示了useMemo在有依賴和無依賴(0個元素的依賴項數組)的區別:
+
+```tsx
+const [firstName, setFirstName] = useState('Wang')
+
+const greet = useMemo(() => `I am ${firstName}.`, [firstName])
+const greetNeverChange = useMemo(() => `I am ${firstName}`, [])
+
+return (
+    <>
+        <p>{greet}</p>
+        <p>{greetNeverChange}</p>
+        <button onClick={() => setFirstName(e => e + 'a')}>Append a</button>
+    </>
+)
+```
+
+## memo
+
+memo與useMemo不同，useMemo記憶值，而memo記憶組件。通過memo創建的組件，**其props的改變且props比較通過會引起組件重渲染**。
+
+memo的類型如下:
+
+```typescript
+function memo<P extends object>(
+    Component: FunctionComponent<P>,
+    propsAreEqual?: (prevProps: Readonly<P>, nextProps: Readonly<P>) => boolean,
+): NamedExoticComponent<P>
+
+function memo<T extends ComponentType<any>>(
+    Component: T,
+    propsAreEqual?: (prevProps: Readonly<ComponentProps<T>>, nextProps: Readonly<ComponentProps<T>>) => boolean,
+): MemoExoticComponent<T>
+```
+
+memo的第一個參數接受一個類組件或函數式組件；第二個參數是可選的，接受用於判斷prpos改變與否的函數。
+
+如下代碼展示了組件在memo和沒有memo時的區別:
+
+```tsx
+// 計為組件A
+const CompWithoutMemo = (props: { name: string, compTag: string}) => {
+    useEffect(() => { console.log(`${props.compTag} updated`)})
+    return <span>{props.name}</span>
+}
+// 計為組件B
+const CompMemorized = memo(CompWithoutMemo)
+
+export default function App() {
+
+    // 更改這個值會引起A和B的重渲染
+    const [name, setName] = useState('Wang')
+
+    // 更改這個值會引起A的重渲染
+    const [age, setAge] = useState(20)
+
+    return (
+        <>
+            <p>{age}</p>
+            <CompMemorized name={name} compTag="CompMemorized"></CompMemorized>
+            <CompWithoutMemo name={name} compTag="CompWithoutMemo"></CompWithoutMemo>
+            <button onClick={() => setName(e => e + 'a')}>Change Name</button>
+            <button onClick={() => setAge(e => e + 1)}>Change Age</button>
+        </>
+    )
+}
+```
+
+上文提到，memo的第二個參數用於決定組件的props改變後是否重渲染。這個參數，當返回值是true時記憶組件(不更新)，為false時更新組件。
+
+```tsx
+// 這個組件接受一個數字num，僅當num是5的倍數時重渲染
+const CompMemorized = memo((props: { num: number}) => {
+    useEffect(() => { console.log(props.num) })
+    return <p>{props.num}</p>
+}, (p, n) => {
+    return n.num % 5 !== 0
+})
+
+export default function A() {
+    const [num, setNum] = useState(0)
+
+    return (
+        <>
+            <CompMemorized num={num}></CompMemorized>
+            <button onClick={() => setNum(e => e + 1)}>setNum</button>
+        </>
+    )
+}
+```

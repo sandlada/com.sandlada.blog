@@ -1,0 +1,150 @@
+---
+import { Image } from "astro:assets";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+    theLatestArticle: Array<CollectionEntry<'articles'>>
+}
+
+const { theLatestArticle } = Astro.props
+
+const theFirst = theLatestArticle[0]
+const theOthers = theLatestArticle.slice(1)
+---
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+    <a class="article-show-item lg:col-span-3" tabindex="0" target="_self" href={`/article/${theFirst.data.id}/`}>
+        {
+            theFirst.data.cover.image && <Image src={theFirst.data.cover.image} alt={theFirst.data.cover.alt} class="cover-image" width={1280} height={640}></Image>
+        }
+        <h3 class="title title-small md:title-medium lg:title-large line-clamp-2">{ theFirst.data.meta.title }</h3>
+        <p class="description body-small md:body-medium lg:body-large line-clamp-2">{ theFirst.data.meta.description }</p>
+        <p class="author label-small md:label-medium lg:label-large">{ theFirst.data.meta.author }</p>
+        <mdc-focus-ring></mdc-focus-ring>
+    </a>
+
+    {
+        theOthers.map(article => (
+            <a class="article-show-item lg-vertical col-span-1" tabindex="0" target="_self" href={`/article/${article.data.id}/`}>
+                {
+                    article.data.cover.image && <Image src={article.data.cover.image} alt={article.data.cover.alt} class="cover-image" width={1280} height={640}></Image>
+                }
+                <h3 class="title title-small md:title-medium line-clamp-2">{ article.data.meta.title }</h3>
+                <p class="description body-small md:body-medium line-clamp-2">{ article.data.meta.description }</p>
+                <p class="author label-small md:label-medium">{ article.data.meta.author }</p>
+                <mdc-focus-ring></mdc-focus-ring>
+            </a>
+        ))
+    }
+
+</div>
+
+
+<style>
+    .article-show-item {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        box-sizing: border-box;
+        position: relative;
+        outline: none;
+        border-radius: 16px;
+        background: var(--md-sys-color-surface-container-lowest);
+        column-gap: 12px;
+        row-gap: 6px;
+        padding: 4px;
+        grid-template-columns: 1fr auto;
+        text-decoration-line: none;
+        -webkit-tap-highlight-color: transparent;
+
+        transition-property: background, color, border-radius;
+        transition-duration: 150ms;
+
+        &>:is(.title, .description, .author) {
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        &>.title {
+            grid-column: 1/2;
+            grid-row: 1/2;
+            margin-inline-start: 16px;
+            margin-block-start: 16px;
+            color: var(--md-sys-color-on-surface);
+        }
+        &>.description {
+            grid-column: 1/2;
+            grid-row: 2/3;
+            margin-inline-start: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        &>.author {
+            grid-column: 1/2;
+            grid-row: 3/4;
+            margin-inline-start: 16px;
+            margin-block-end: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        &>.cover-image {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1280 / 640;
+            object-fit: cover;
+            object-position: center;
+            max-width: 96px;
+            border-start-end-radius: inherit;
+            border-end-end-radius: inherit;
+            border-start-start-radius: 16px;
+            border-end-start-radius: 16px;
+
+            @media (min-width: 600px) {
+                max-width: 128px;
+            }
+            @media (min-width: 840px) {
+                max-width: 196px;
+            }
+
+            grid-column: 2/3;
+            grid-row: 1/4;
+        }
+
+        &:hover,
+        &:focus-within {
+            border-radius: 32px;
+            background: var(--md-sys-color-secondary-container);
+        }
+
+        &:active {
+            border-radius: 12px;
+        }
+
+
+    }
+
+    .article-show-item.lg-vertical {
+
+        @media (min-width: 840px) {
+            grid-template-columns: 1fr;
+            &>.cover-image {
+                border-radius: inherit;
+                grid-column: 1/2;
+                grid-row: 1/2;
+                width: 100%;
+                max-width: unset;
+            }
+            &>.title {
+                grid-column: 1/2;
+                grid-row: 2/3;
+            }
+            &>.description {
+                grid-column: 1/2;
+                grid-row: 3/4;
+            }
+            &>.author {
+                grid-column: 1/2;
+                grid-row: 4/5;
+            }
+        }
+
+    }
+</style>

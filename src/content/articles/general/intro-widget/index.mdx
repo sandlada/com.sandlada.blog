@@ -1,0 +1,208 @@
+---
+id: "w50O4l8xlj1aTGlQ-uM0Q"
+category: "general"
+order: 1
+
+hasOverview: true
+overview: "这篇文章主要介绍了 Windows 平台下的软件包管理器 WinGet。WinGet 由命令行工具和后台服务两部分组成，可以用于在 Windows 系统上管理应用程序的安装、卸载和更新。文章详细讲解了 WinGet 的先决条件、源管理、应用程序搜索、安装、卸载和更新等操作，并特别说明了如何在没有安装 Microsoft Store 的情况下，通过 WinGet 使用 msstore 源安装应用程序。此外，文章还介绍了如何查询 Microsoft Store 源应用程序的 ID。总而言之，WinGet 为 Windows 用户提供了一个方便快捷的命令行软件包管理工具。"
+
+meta:
+    title: "認識WinGet，使用WinGet進行Windows平臺軟件的管理"
+    description: "Windows 11 IoT Enterprise LISC已經發佈了一段時間。最近心血來潮，全新安裝了Windows 11 IoT Enterprise LISC，由於它共給特殊設備運行，沒有堤供Microsoft Store等其它消費者軟體，作者了解了一個"
+    author: "kai-orion"
+    keywords: ["windows", "winget", "package manager"]
+    publishedAt: 2024-10-1
+    createdAt: 2024-10-1
+    updatedAt: 2024-10-1
+    language: "zh_Hant"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: "intro-widget.png"
+    alt: ''
+---
+
+# WinGet
+
+## 介紹
+
+Winget 是由 Microsoft 發佈的**Windows 包管理器**，它由兩部分組成：
+
+- WinGet 命令行
+- WinGet 服務
+
+對於大多數 Windows 用戶， WinGet 是一個在 Windows 上管理應用程式（安裝、卸載、更新）的命令行工具。
+
+## 先決條件
+
+| Item                               |                                     Requirement |
+| :--------------------------------- | ----------------------------------------------: |
+| Windows                            |  Windows 10 1709 以上（Windows 10.0.16299 以上） |
+| Microsoft.WindowsAppRuntime.1.8    |                                      需要被安裝 |
+| Microsoft.VCLibs.140.00            |                                      需要被安裝 |
+| Microsoft.VCLibs.140.00.UWPDesktop |                                      需要被安裝 |
+| Microsoft.VCLibs.x64.14.00.Desktop |                                      需要被安裝 |
+| Microsoft.UI.Xaml                  |                                      需要被安裝 |
+| Microsoft.DesktopAppInstaller      |                                      需要被安裝 |
+
+以下是 WinGet 依賴的下载命令：
+
+```bash
+Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
+```
+
+还有与 Winget 绑定在一起的依赖，前往这个页面下载并解压 `DesktopAppInstaller_Dependencies.zip
+` 这个文件：[Winget Github Release Page](https://github.com/microsoft/winget-cli/releases).
+
+安装依赖：
+
+```bash
+Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
+Add-AppxPackage Microsoft.VCLibs.140.00_14.0.33519.0_x64.appx
+Add-AppxPackage Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx
+Add-AppxPackage Microsoft.WindowsAppRuntime.1.8_8000.616.304.0_x64.appx
+Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
+```
+
+最后安装本体：
+
+```bash
+Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+```
+
+## 源
+
+WinGet 的下載、安裝、更新的聯網操作都經過了 WinGet 源，通過 WinGet 獲取應用程式必須提供源。
+
+WinGet 在安裝後默認提供兩個源：
+
+- winget 源
+- msstore 源
+
+### 查詢源
+
+```bash
+winget source list
+```
+
+### 刪除源
+
+```bash
+winget source remove 源名稱
+```
+
+以刪除`msstore`源爲例：
+
+```bash
+winget source remove msstore
+```
+
+### 重置源
+
+```bash
+winget source reset --force
+```
+
+## 搜索源上的應用程式
+
+```bash
+winget search 應用程式名稱
+```
+
+以搜索`Terminal`爲例：
+
+```bash
+winget search terminal
+```
+
+_這段命令將從 WinGet 源上搜索帶有 terminal 關鍵字的所有應用程式。_
+
+附帶`-s winget`選項以搜索來自 winget 源的應用程式：
+
+```bash
+winget search terminal -s winget
+```
+
+## 安裝源上的應用程式
+
+```bash
+winget install 應用程式名稱
+```
+
+以`terminal`爲例：
+
+```bash
+winget install Microsoft.WindowsTerminal
+```
+
+附帶`-s msstore`以指定下載 msstore 源的應用程式。
+
+```bash
+winget install Microsoft.WindowsTerminal -s msstore
+```
+
+_通過 WinGet 的`-s msstore`選項，可實現在未安裝 Microsoft Store 的情況下獲取 Microsoft Store 源提供的應用程式的需求，這在使用非消費者版本 Windows 時很有用。_
+
+## 卸載應用程式
+
+```bash
+winget uninstall 應用程式名稱
+```
+
+以卸載`terminal`爲例：
+
+```bash
+winget uninstall terminal
+```
+
+## 更新應用程式
+
+若要檢測是否有應用程式需要更新：
+
+```bash
+winget upgrade
+```
+
+若要更新指定的應用程式：
+
+```bash
+winget upgrade 應用程式名稱
+```
+
+以更新`terminal`爲例：
+
+```bash
+winget upgrade terminal
+```
+
+## 關於 MS 源的應用程式 ID 的查詢
+
+MS 源的應用程式 ID 的方式：
+
+- [Microsoft Apps](https://apps.microsoft.com/)網站查詢
+- `winget search 應用程式名稱 -s msstore`命令查詢
+
+以`terminal`爲例，在 Microsoft Apps 上，`terminal`的搜索結果的地址爲：
+
+```plain-text
+https://apps.microsoft.com/detail/9n0dx20hk701
+```
+
+從地址中可以知道唯一標誌碼爲：
+
+```plain-text
+9n0dx20hk701
+```
+
+則安裝`msstore`源上的`Terminal`的命令行命令爲：
+
+```bash
+winget install 9n0dx20hk701 -s msstore
+```

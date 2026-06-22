@@ -1,0 +1,51 @@
+---
+import { NavigationLinkRecord } from "./navigation-link"
+
+const links = Object.values(NavigationLinkRecord)
+---
+
+<mdc-navigation-rail quick>
+    <span aria-hidden="true" slot="menu-active-icon"></span>
+    <span aria-hidden="true" slot="menu-inactive-icon"></span>
+    {
+        links.map(({ label, activeIcon, inactiveIcon, href }) => (
+            <a class="tab-wrapper" href={href} tabindex="-1">
+                <mdc-navigation-rail-tab name="navigation-rail-group">
+                    {label}
+                    <mdc-icon slot="active-icon" set:html={activeIcon}></mdc-icon>
+                    <mdc-icon slot="inactive-icon" set:html={inactiveIcon}></mdc-icon>
+                </mdc-navigation-rail-tab>
+            </a>
+        ))
+    }
+</mdc-navigation-rail>
+
+<script>
+import "@sandlada/mdc/build/components/navigation-item/navigation-rail-tab.js";
+import "@sandlada/mdc/build/components/navigation-rail/navigation-rail.js";
+</script>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const pathname = location.pathname
+        /** @type {NodeListOf<HTMLAnchorElement>} */
+        const tabs = document.querySelectorAll(`mdc-navigation-rail a.tab-wrapper`)
+        await new Promise(r => setTimeout(r, 700))
+
+        tabs.forEach(anchor => {
+            if(anchor.getAttribute('href') === pathname) {
+                anchor.querySelector(`mdc-navigation-rail-tab[name="navigation-rail-group"]`)?.setAttribute('checked', '')
+            }
+        })
+    })
+</script>
+
+<style>
+    mdc-navigation-rail {
+        height: 100%;
+    }
+    a.tab-wrapper {
+        border: none;
+        outline: none;
+    }
+</style>

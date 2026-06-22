@@ -1,0 +1,18 @@
+---
+import { Image } from "astro:assets";
+
+type Props = Parameters<typeof Image>[0]
+
+const props = Astro.props
+---
+
+<Image class="article-cover-image" id="article-cover-image" {...props}></Image>
+
+<style>
+    .article-cover-image {
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 1280 / 640;
+        border-radius: 24px;
+    }
+</style>

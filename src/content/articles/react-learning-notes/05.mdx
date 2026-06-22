@@ -1,0 +1,133 @@
+---
+id: "X-wEeuobC4AZfCFyvvl10"
+category: "react-learning-notes"
+order: 5
+
+meta:
+    title: "React Learning Day 5: React Redux Part 1"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "redux", "state"]
+    publishedAt: 2025-8-2
+    createdAt: 2025-8-2
+    updatedAt: 2025-8-2
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+
+# React Learning Day 5: React Redux Part 1
+
+Redux是一個完整的js狀態管理解決方案。Redux與context相比，redux在狀態管理方面更加精細，性能更占優勢。
+
+本文以Modern Redux的角度了解狀態切片、減速器的基本使用。
+
+## Installation
+
+```bash
+npm install @reduxjs/toolkit react-redux
+```
+
+## createSlice
+
+createSlice用於創建狀態**的**切片。在狀態層面可以存在多個切片，例如themeSlider、userSlider、fileSlider等。
+
+createSlice接受的參數包括：
+
+- 名稱
+- 初始狀態
+- 狀態轉換函數對象
+
+```typescript
+type ListState = {
+    items: Array<string>
+}
+
+export const listSlice = createSlice({
+    name: 'list',
+    initialState: {
+        items: [],
+    } as ListState,
+    reducers: {
+        add: (state, action: PayloadAction<string>) => {
+            state.items.push(action.payload)
+        },
+    }
+})
+
+export const { add } = listSlice.actions
+```
+
+## configureStore
+
+定義應用級別的狀態倉庫，通常且最佳實踐是**一個App只存在一個store**。
+
+```typescript
+export const store = configureStore({
+    reducer: {
+        list: listSlice.reducer,
+    }
+})
+
+export type AppRootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+```
+
+useSelector和useDispatch用於獲取和修改狀態，默認不提供類型。創建附帶類型的hooks(可選的)：
+
+```typescript
+export const useAppSelector = useSelector.withTypes<AppRootState>()
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+```
+
+在應用級別的DOM層中提供數據：
+
+```tsx
+<Provider store={store}>
+    <App></App>
+</Provider>
+```
+
+
+## useSelector
+
+useSelector用於獲取store中的狀態。
+
+```tsx
+// 推薦在hooks中創建附帶類型的useAppSelector來代替useSelector
+export const useAppSelector = useSelector.withTypes<AppRootState>()
+
+// App Component
+const items = useAppSelector((s) => s.list.items)
+return (
+    <div>
+        <ul>
+            {items.map(item => <li>{item}</li>)}
+        </ul>
+    </div>
+)
+```
+
+## useDispatch
+
+useDispatch用於發送action以觸發狀態更新。
+
+```tsx
+// 推薦在hooks中創建附帶類型的useAppDispatch來代替useDispatch
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+
+// App Component
+const dispatch = useAppDispatch()
+return <button onClick={() => dispatch(add('new item'))}>Add</button>
+```

@@ -1,0 +1,349 @@
+---
+import PageMeta from "@sandlada/astro-page-meta/PageMeta.astro"
+import RootHTMLLayout from "../layouts/RootHTMLLayout.astro"
+import { Article } from "../modules/article/Article"
+import SearchBar from "../components/search-bar/SearchBar.astro"
+import NavigationBar from "../components/navigation/NavigationBar.astro"
+import NavigationRail from "../components/navigation/NavigationRail.astro"
+import PageHeader from "../components/page-header/PageHeader.astro"
+import NavigationablePageLayout from "../layouts/NavigationablePageLayout.astro"
+import PageFooter from "../components/page-footer/PageFooter.astro"
+import BlogIcon from "../../public/blog-icon.svg"
+import WebsiteCover from "../../public/website-cover.png"
+
+
+const articles = (await Article.GetAllArticles()).filter(
+    (article) => article.data.status.isVisible,
+)
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
+---
+
+<RootHTMLLayout lang="zh-Hant">
+    <PageMeta
+        slot="head"
+        title="Kai Orion's Blog"
+        description="All of Kai Orion's blog posts are listed here."
+        robots="noindex, follow"
+        ogType="website"
+        author="Kai Orion"
+        url={canonicalUrl.href}
+        twitterCard="summary"
+        icon={BlogIcon}
+        image={WebsiteCover}
+        imageAlt="A website icon with the word Blog written in the center."
+
+    />
+
+    <NavigationablePageLayout slot="body">
+        <NavigationBar slot="navigation-bar" activeLabel="Home" />
+        <NavigationRail slot="navigation-rail" activeLabel="Home" />
+        <div slot="content">
+            <PageHeader />
+            <SearchBar id="search-bar" />
+            <div id="search-view"></div>
+            <PageFooter></PageFooter>
+        </div>
+    </NavigationablePageLayout>
+</RootHTMLLayout>
+
+<!-- Render Articles -->
+<script is:inline define:vars={{ articles }}>
+    /**
+     *
+     * @param host {HTMLElement}
+     * @param articles {Array<{
+     *      body: string
+     *      collection: string
+     *      data: {
+     *          category: string
+     *          part: number
+     *          meta: {
+     *              title: string
+     *              author: string
+     *              description: string
+     *              keywords: Array<string>
+     *              publishTime: string
+     *          }
+     *          hasOverview: boolean
+     *          overview: string
+     *          status: {
+     *              isDraft: boolean
+     *              isVisible: boolean
+     *              isFeatured: boolean
+     *          }
+     *          cover: {
+     *              image: unknown
+     *              alt: string | null
+     *          }
+     *      }
+     *      id: string
+     *      slug: string
+     * }>}
+     */
+    const renderArticles = (host, articles) => {
+        /**
+         * @param article {{
+         *      body: string
+         *      collection: string
+         *      data: {
+         *          id: string
+         *          category: string
+         *          order: number
+         *          meta: {
+         *              title: string
+         *              author: string
+         *              description: string
+         *              keywords: Array<string>
+         *              createdAt: Date
+         *              publishedAt: Date
+         *              updatedAt: Date
+         *              language: string
+         *          }
+         *          hasOverview: boolean
+         *          overview?: string | null
+         *          status: {
+         *              isDraft: boolean
+         *              isVisible: boolean
+         *              isFeatured: boolean
+         *          }
+         *          hasCover: boolean
+         *          cover: {
+         *              image: unknown
+         *              alt: string | null
+         *          }
+         *      }
+         *      id: string
+         *      slug: string
+         * }}
+         */
+        const createArticle = (article) => {
+            const container = document.createElement("a")
+            container.href = `/article/${article.data.id}/`
+            container.classList.add("article-show-item")
+            container.tabIndex = 0
+
+            const title = document.createElement("h3")
+            title.textContent = article.data.meta.title
+            title.classList.add("title")
+            const desc = document.createElement("p")
+            desc.textContent = article.data.meta.description
+            desc.classList.add("description")
+            const author = document.createElement("p")
+            author.textContent = article.data.meta.author
+            author.classList.add("author")
+            const tags = article.data.meta.keywords
+                .map((key) => ({
+                    key: key,
+                    element: document.createElement("span"),
+                }))
+                .map((e) => {
+                    e.element.textContent = e.key
+                    return e.element
+                })
+                .reduce((p, c) => {
+                    p.appendChild(c)
+                    return p
+                }, document.createElement("div"))
+            tags.classList.add("tags")
+
+            container.appendChild(title)
+            container.appendChild(desc)
+            container.appendChild(author)
+            container.appendChild(tags)
+            container.appendChild(document.createElement("mdc-focus-ring"))
+            return container
+        }
+
+        articles
+            .map((article) => createArticle(article))
+            .forEach((e) => {
+                host.append(e)
+            })
+    }
+    /**
+     *
+     * @param view {HTMLElement}
+     */
+    const emptyArticles = (view) => {
+        view.replaceChildren()
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        /**
+         * @type {HTMLInputElement | null}
+         */
+        const bar = document.querySelector(`#search-bar`)
+        /**
+         * @type {HTMLElement | null}
+         */
+        const view = document.querySelector(`#search-view`)
+
+        if (!bar || !view) {
+            return
+        }
+
+        let pass = true
+        bar.addEventListener("input", (e) => {
+            e.stopPropagation()
+            e.stopImmediatePropagation()
+
+            if (!pass) {
+                return
+            }
+
+            pass = false
+
+            const value = e.target.value
+
+            let queriedArticles
+            if (value.length === 0 || value === "") {
+                queriedArticles = articles
+            } else {
+                queriedArticles = articles.filter((article) => {
+                    if (
+                        article.data.meta.title.indexOf(value) !== -1 ||
+                        article.data.meta.description.indexOf(value) !== -1 ||
+                        article.data.meta.keywords.join("").indexOf(value) !==
+                            -1 ||
+                        article.data.meta.author.indexOf(value) !== -1 ||
+                        article.body.indexOf(value) !== -1 ||
+                        article.data.meta.publishTime.indexOf(value) !== -1
+                    ) {
+                        return true
+                    }
+                    return false
+                })
+            }
+
+            view.dispatchEvent(
+                new CustomEvent("update-search-view", {
+                    bubbles: false,
+                    cancelable: false,
+                    composed: false,
+                    detail: {
+                        articles: queriedArticles,
+                    },
+                }),
+            )
+
+            pass = true
+        })
+
+        view.addEventListener("update-search-view", (e) => {
+            emptyArticles(view)
+            renderArticles(view, e.detail.articles)
+        })
+
+        renderArticles(view, articles)
+    })
+</script>
+
+<style is:global>
+    @reference "tailwindcss";
+    @reference "../styles/global.css";
+
+    #search-view {
+        display: grid;
+        gap: 8px;
+        margin-top: 24px;
+    }
+
+    .article-show-item {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        grid-template-columns: 1fr auto auto;
+        box-sizing: border-box;
+        position: relative;
+        outline: none;
+        border-radius: 16px;
+        background: var(--md-sys-color-surface-container-lowest);
+        column-gap: 12px;
+        row-gap: 6px;
+        padding: 4px;
+        text-decoration-line: none;
+        -webkit-tap-highlight-color: transparent;
+
+        transition-property: background, color, border-radius;
+        transition-duration: 150ms;
+
+        & > :is(.title, .description, .author) {
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        & > .title {
+            @apply title-small md:title-medium;
+            grid-column: 1/2;
+            grid-row: 1/2;
+            margin-inline-start: 16px;
+            margin-block-start: 16px;
+            color: var(--md-sys-color-on-surface);
+        }
+        & > .description {
+            @apply body-small md:body-medium;
+            grid-column: 1/2;
+            grid-row: 2/3;
+            margin-inline-start: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        & > .author {
+            @apply label-small md:label-medium;
+            grid-column: 1/2;
+            grid-row: 3/4;
+            margin-inline-start: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        & > .tags {
+            @apply label-small md:label-medium;
+            grid-column: 1/2;
+            grid-row: 4/5;
+            margin-inline-start: 16px;
+            margin-block-end: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            & > span {
+                padding-inline: 4px;
+                padding-block: 4px;
+                border-radius: 4px;
+                color: var(--md-sys-color-on-surface);
+                background: var(--md-sys-color-surface);
+            }
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        & > .cover-image {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1280 / 640;
+            object-fit: cover;
+            object-position: center;
+            max-width: 96px;
+            border-start-end-radius: inherit;
+            border-end-end-radius: inherit;
+            border-start-start-radius: 16px;
+            border-end-start-radius: 16px;
+
+            @media (min-width: 600px) {
+                max-width: 128px;
+            }
+            @media (min-width: 840px) {
+                max-width: 196px;
+            }
+
+            grid-column: 2/3;
+            grid-row: 1/4;
+        }
+
+        &:hover,
+        &:focus-within {
+            border-radius: 32px;
+            background: var(--md-sys-color-secondary-container);
+        }
+
+        &:active {
+            border-radius: 12px;
+        }
+    }
+</style>

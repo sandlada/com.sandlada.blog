@@ -1,0 +1,53 @@
+---
+
+---
+
+<form id="article-page-font-form" method="dialog" aria-label="A form that switches between sans and serif fonts.">
+    <label aria-label="Selecting this option will change the font of the web page to sans.">
+        <span>Sans</span>
+        <md-radio name="font" value="sans" checked></md-radio>
+    </label>
+    <label aria-label="Selecting this option will change the font of the web page to serif.">
+        <span>Serif</span>
+        <md-radio name="font" value="serif"></md-radio>
+    </label>
+</form>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector(`#article-page-font-form`) as HTMLFormElement
+        
+        const getFormData = (): 'sans' | 'serif' => {
+            const data = new FormData(form)
+            return data.get('font') as 'sans' | 'serif' | null ?? 'sans'
+        }
+
+        const updateRootAttribute = (font: 'sans' | 'serif') => {
+            document.documentElement.dispatchEvent(new CustomEvent('font:attribute-change', { 
+                detail: {
+                    font,
+                },
+                bubbles: true,
+            }))
+        }
+
+        form.addEventListener('change', (e: Event) => {
+            const font = getFormData()
+            updateRootAttribute(font)
+        })
+
+        form.dispatchEvent(new Event('change'))
+    })
+</script>
+
+<script>
+    import '@material/web/radio/radio.js'
+</script>
+
+<style>
+    #article-page-font-form {
+        display: inline-flex;
+        gap: 12px;
+        align-items: center;
+    }
+</style>

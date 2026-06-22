@@ -1,0 +1,222 @@
+---
+
+---
+
+<div class="navigable-page-container" id="navigable-page-container">
+
+    <span class="rail" id="nav-rail">
+        <slot name="navigation-rail"></slot>
+    </span>
+
+    <span class="bar" id="nav-bar">
+        <slot name="navigation-bar"></slot>
+    </span>
+
+    <main class="content">
+        <div class="page-container">
+            <slot name="content"></slot>
+        </div>
+    </main>
+
+</div>
+
+<script>
+import type { NavigationBar } from "@sandlada/mdc/build/components/navigation-bar/navigation-bar.js"
+import type { NavigationRail } from "@sandlada/mdc/build/components/navigation-rail/navigation-rail.js"
+import { atom } from "nanostores"
+
+const getDocumentElmentWidth = () => document.documentElement.clientWidth
+
+const handleInit = () => {
+    const rail = document.querySelector(`#nav-rail>mdc-navigation-rail`) as NavigationRail
+    const bar = document.querySelector(`#nav-bar>mdc-navigation-bar`) as NavigationBar
+
+    const width = getDocumentElmentWidth()
+    const railOpen = atom(false)
+    const barOpen = atom(false)
+    const barHorizonal = atom(false)
+
+    let b = false
+    railOpen.listen((value) => {
+        if(value) {
+            b = true
+            rail.setAttribute('open', ``)
+        } else {
+            setTimeout(() => {
+                if(b) {
+                    return
+                }
+                rail.removeAttribute('open')
+                b = false
+            }, 500)
+        }
+    })
+    barOpen.listen((value) => {
+        if(value) {
+            b = true
+            bar.setAttribute('open', ``)
+        } else {
+            setTimeout(() => {
+                if(b) {
+                    return
+                }
+                bar.removeAttribute('open')
+                b = false
+            }, 500)
+        }
+    })
+    barHorizonal.listen((value) => {
+        if(value) {
+            bar.querySelectorAll(`mdc-navigation-bar-tab`).forEach(e => e.setAttribute('direction', `horizonal`))
+        } else {
+            bar.querySelectorAll(`mdc-navigation-bar-tab`).forEach(e => e.setAttribute('direction', `vertical`))
+        }
+    })
+
+    railOpen.notify(width > 1200)
+    barOpen.notify(width <= 1200)
+    barHorizonal.notify(width <= 1200 && width >= 840)
+
+    const resizeObserve = new ResizeObserver((e) => {
+        if(!e[0]) return
+        const w = e[0].contentRect.width
+
+        if(w <= 1200) {
+            if(railOpen.get()) {
+                railOpen.set(false)
+            }
+            if(!barOpen.get()) {
+                barOpen.set(true)
+            }
+            if(w < 840 && barHorizonal.get()) {
+                barHorizonal.set(false)
+            } else if(w >= 840 && !barHorizonal.get()) {
+                barHorizonal.set(true)
+            }
+        } else {
+            if(!railOpen.get()) {
+                railOpen.set(true)
+            }
+            if(barOpen) {
+                barOpen.set(false)
+            }
+        }
+
+    })
+
+    resizeObserve.observe(document.documentElement)
+}
+
+document.addEventListener('DOMContentLoaded', handleInit)
+</script>
+
+<style>
+
+    .navigable-page-container {
+        min-height: 100svh;
+        max-height: 100svh;
+        overflow: clip;
+
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: 1fr auto;
+    }
+
+    .rail {
+        box-sizing: border-box;
+        grid-column: 1/2;
+        grid-row: 1/3;
+        overflow: hidden;
+        --mdc-navigation-rail-collapsed-container-color: var(--md-sys-color-surface-container);
+        width: 96px;
+        @media (max-width: 1200px) {
+            width: 0px;
+        }
+        border-right-width: 1px;
+        border-right-style: solid;
+        border-right-color: transparent;
+
+        transition-property: all;
+        transition-duration: 500ms;
+    }
+    :root[dark] .rail {
+        @media (min-width: 1200px) {
+            border-right-color: var(--md-sys-color-outline-variant);
+        }
+    }
+
+    .bar {
+        box-sizing: border-box;
+        grid-column: 1/3;
+        grid-row: 2/3;
+        width: 100%;
+        overflow: hidden;
+
+        transform: translateY(64px);
+        height: 0px;
+        opacity: 0;
+
+        border-top-width: 1px;
+        border-top-style: solid;
+        border-top-color: transparent;
+
+        @media (max-width: 1200px) {
+            opacity: 1;
+            height: 64px;
+            transform: translateY(0px);
+        }
+        transition-property: all;
+        transition-duration: 500ms;
+    }
+    :root[dark] .bar {
+        @media (max-width: 1200px) {
+            border-top-color: var(--md-sys-color-outline-variant);
+        }
+    }
+
+    .content {
+        grid-column: 2/3;
+        grid-row: 1/2;
+        box-sizing: border-box;
+        overflow: auto;
+        position: relative;
+        transition-property: all;
+        transition-duration: 500ms;
+    }
+</style>
+
+<style>
+    .page-container {
+        box-sizing: border-box;
+        width: 100%;
+
+        transition-property: padding;
+        transition-duration: 50ms;
+
+        padding: 12px;
+        @media (min-width: 600px) {
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+        @media (min-width: 720px) {
+            padding-left: 72px;
+            padding-right: 72px;
+        }
+        @media (min-width: 840px) {
+            padding-left: 96px;
+            padding-right: 96px;
+        }
+
+        @media (min-width: 1296px) {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 96px;
+            padding-right: 96px;
+        }
+        @media (min-width: 1392px) {
+            padding-left: 0px;
+            padding-right: 0px;
+        }
+    }
+</style>

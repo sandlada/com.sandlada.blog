@@ -1,0 +1,283 @@
+---
+id: "dulukHEzRAVSiajMWTLao"
+category: "react-learning-notes"
+order: 1
+
+meta:
+    title: "React Learning Day 1: useState, useReducer, useEffect, useRef"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "stateful", "use-state", "use-reducer", "use-effect", "use-ref"]
+    publishedAt: 2025-8-1
+    createdAt: 2025-8-1
+    updatedAt: 2025-8-1
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+
+# React Learning Day 1: useState, useReducer, useEffect, useRef
+
+這篇筆記介紹了關於狀態的工具函數。
+
+## useState
+
+在沒有像useState這樣的狀態管理工具的情況下，Funtional Components本身沒有狀態。useState提供getter和setter以獲取和改變狀態，這使狀態和視圖產稱關係。
+
+useState的類型如下。useState的傳入參數可以接受一個對象，也可以接受一個函數引用。useState總是返回一個元組，元組第一位是getter，元組第二位是setter。
+
+```typescript
+function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]
+function useState<S = undefined>(): [S | undefined, Dispatch<SetStateAction<S | undefined>>]
+
+type Dispatch<A> = (value: A) => void
+type SetStateAction<S> = S | ((prevState: S) => S)
+```
+
+getter是當前的值。setter是一個函數，其參數或函數作為其參數的返回值，是setter要設置的最新值。如下代碼展示了getter和setter的用法:
+
+```typescript
+// 值對象作為參數
+const [getter, setter] = useState<number>(0)
+
+// 引用對象作為參數
+class Value {
+    public value = 0
+}
+const [getter, setter] = useState<Value>(new Value())
+
+// 函數引用作為參數１
+const generateNumber = () => Math.random()
+const [getter, setter] = useState<number>(generateNumber)
+
+// 函數引用作為參數２
+function generateNumber() {
+    return Math.random()
+}
+const [getter, setter] = useState<number>(generateNumber)
+
+// getter是當前的值
+const logValue = () => {
+    console.log(getter)
+}
+// setter是一個函數，其參數或函數作為其參數的返回值，是setter要設置的最新值。
+const updateValue1 = () => setter(123)
+const updateValue2 = () => setter(oldValue => oldValue + 456)
+```
+
+## useReducer
+
+useReducer是useState的備選方案。useReducer的統一管理方式使其更適合複雜的數據結構。
+
+useReducer的類型如下。useReducer的第一個參數是一個函數(這個函數的第一個參數為更新前的值，第二個參數為額外的)，第二個參數為初始值。useReducer的返回值類似useState的，返回值是一個元組，元組第一位是getter，元組第二位是setter。
+
+```typescript
+function useReducer<S, A extends AnyActionArg>(
+    reducer: (prevState: S, ...args: A) => S,
+    initialState: S,
+): [S, ActionDispatch<A>]
+```
+
+如下代碼，getter是value，setter是dispatch。通過調用dispatch函數並傳入dispatch(也就是reducer)中對應的狀態码來更新狀態。
+
+```typescript
+type TState = {
+    isDark: boolean
+    sourceColor: string
+    contrast: number
+}
+type TAction =
+    {type:'change-to-light'} |
+    {type:'change-to-dark'} |
+    {type:'change-source-color'; payload: string} |
+    {type:'change-contrast'; payload: number}
+
+const reducer: Reducer<TState, TAction> = (state, action) => {
+    switch(action.type) {
+        case 'change-to-light': return ({ ...state, isDark: false })
+        case 'change-to-dark': return ({ ...state, isDark: true })
+        case 'change-source-color': return ({ ...state, sourceColor: action.payload })
+        case 'change-contrast': return ({ ...state, contrast: action.payload })
+        default:
+            throw new Error('Non-Supported Action.')
+    }
+}
+const initialValue = {
+    isDark: false,
+    sourceColor: 'red',
+    contrast: 1.0,
+}
+const [value, dispatch] = useReducer(reducer, initialValue)
+```
+
+## useEffect
+
+useEffect是組件中執行具有副作用的代碼的好位置。例如獲取DOM、執行請求等。
+
+useEffect的類型如下:
+
+```typescript
+declare const UNDEFINED_VOID_ONLY: unique symbol
+
+type Destructor = () => void | { [UNDEFINED_VOID_ONLY]: never }
+type EffectCallback = () => void | Destructor
+type DependencyList = readonly unknown[]
+
+function useEffect(effect: EffectCallback, deps?: DependencyList): void
+```
+
+useEffect的第一個參數，要麼接受一個返回清理函數的函數，要麼什麼都不返回:
+
+```typescript
+// 每次渲染時執行
+useEffect(() => {
+    console.log('Mounted')
+})
+
+// 每次渲染時執行
+useEffect(() => {
+    console.log('Component Rendered.')
+    // 組件銷毀時執行
+    return () => {
+        console.log('Component Destroyed.')
+    }
+})
+```
+
+useEffect的第二個參數可選，接受一個包含了響應數據依賴的數組。若不提供，則每次渲染時調用；若提供，則在依賴變化且渲染後調用。可以提供0個元素的數組作為參數，這使useEffect僅在創建和銷毀時起作用。
+
+```tsx
+function CompB(props: { count: number }) {
+    useEffect(() => {
+        console.log('Component B Rendered.')
+        return () => {
+            console.log('Component B Destroyed.')
+        }
+    })
+
+    useEffect(() => {
+        console.log('Component B Rendered (Run only once).')
+        return () => {
+            console.log('Component B Destroyed (Run only once).')
+        }
+    }, [])
+
+    return (
+        <p>{props.count}</p>
+    )
+}
+
+export default function A() {
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+        console.log('Component A Updated.', count)
+    }, [count])
+
+    useEffect(() => {
+        console.log('Component A Rendered (Run only once).')
+    }, [])
+
+    return (
+        <>
+            <CompB count={count}></CompB>
+            <button onClick={() => setCount(e => e + 1)}>Click me</button>
+        </>
+    )
+}
+```
+
+如下代碼展示了組件在創建和銷毀時，useEffect(..., [])是如何運作的:
+
+```tsx
+function CompB() {
+    useEffect(() => {
+        console.log('Component B Rendered (Run only once).')
+        return () => {
+            console.log('Component B Destroyed (Run only once).')
+        }
+    }, [])
+    return (
+        <p>I am Component B</p>
+    )
+}
+
+export default function A() {
+    const [state, setState] = useState(true)
+    return (
+        <>
+            {state && <CompB></CompB>}
+            <button onClick={() => setState(false)}>Kill Component B</button>
+        </>
+    )
+}
+```
+
+## useRef
+
+useRef是useState的"不引起視圖更新"的類似。通過useRef創建的數據，其狀態變化不會引起視圖更新，而且更新是同步的，這意味著更新後可以立即獲取最新值。因為useRef不會引起視圖更新，所以通過useRef創建的對象無法在useEffect中正常運作。
+
+useRef的類型如下。useRef接受一個參數作為返回值的初始值，返回值是一個通過current包裝的可變對象。
+
+```typescript
+interface RefObject<T> {
+    current: T
+}
+
+function useRef<T>(initialValue: T): RefObject<T>
+function useRef<T>(initialValue: T | null): RefObject<T | null>
+function useRef<T>(initialValue: T | undefined): RefObject<T | undefined>
+
+```
+
+```tsx
+export default function A() {
+    // 永遠為0
+    let count1 = 0
+    // 狀態會更新，但不會引起視圖更新
+    const count2 = useRef(0)
+    // 狀態會更新，也會引起視圖更新
+    const [v, updateView] = useState(0)
+
+    useEffect(() => { console.log('Component updated') })
+
+    return (
+        <>
+            <p>{count1}</p>
+            <p>{count2.current}</p>
+            <button onClick={() => count1 += 1}>Update Count1 (But it is always equal to 0)</button>
+            <button onClick={() => count2.current += 1}>Update Count2</button>
+            <button onClick={() => updateView(e => e + 1)}>Update Component</button>
+        </>
+    )
+}
+```
+
+useRef還可以與DOM元素綁定。與DOM元素綁定後，在return前，獲取值是不可靠的(DOM未初始化)，在useEffect中獲取值通常是推薦的作法。
+
+```tsx
+export default function A() {
+    const dom = useRef(null)
+
+    useEffect(() => {
+        console.log(dom.current)
+    })
+
+    return (
+        <>
+            <p ref={dom}>Hi</p>
+        </>
+    )
+}
+```

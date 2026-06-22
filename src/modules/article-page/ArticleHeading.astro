@@ -1,0 +1,63 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+    headings: Array<MarkdownHeading>
+}
+
+const { headings } = Astro.props
+---
+
+<ul class="article-headings">
+    {
+        headings.map(e => <li class={`depth-${e.depth}`}>
+            <a href={`#${e.slug}`} target="_self" class="body-small md:body-medium lg:body-large">
+                {e.text}
+            </a>
+        </li>)
+    }
+</ul>
+
+<style>
+    ul.article-headings {
+        all: unset;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        li {
+            all: unset;
+            box-sizing: border-box;
+            display: inline-flex;
+            
+            & a {
+                text-underline-offset: 2px;
+                color: var(--md-sys-color-primary);
+                transition-property: text-underline-offset;
+                transition-duration: 150ms;
+                
+                &:hover {
+                    text-underline-offset: 4px;
+                }
+            }
+
+
+            &.depth-1 {
+            }
+            &.depth-2 {
+                margin-left: 16px;
+            }
+            &.depth-3 {
+                margin-left: 32px;
+            }
+            &.depth-4 {
+                margin-left: 48px;
+            }
+            &.depth-5 {
+                margin-left: 64px;
+            }
+            &.depth-6 {
+                margin-left: 80px;
+            }
+        }
+    }
+</style>

@@ -1,0 +1,65 @@
+---
+import SwitchThemeIconButton from '../../modules/SwitchThemeIconButton.astro'
+import HctPickerDialog from '../hct-picker/HctPickerDialog.astro'
+import HctPickerIconButton from '../hct-picker/HctPickerIconButton.astro'
+---
+
+<header class="page-header" id="page-header">
+
+    <a href="/" aria-label="Jump to the homepage of Kai Orion's Blog in the current tab.">
+        <svg aria-hidden="true" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+            <rect fill="var(--md-sys-color-primary-container)" width="256" height="256" />
+            <g>
+                <path fill="var(--md-sys-color-on-primary-container)" d="M187.977,197.935l-42.729,0.027l-27.669-53.49l-11.168,6.67l0.029,46.844l-38.024,0.023L68.329,58.066 l38.024-0.023l0.039,60.759c1.565-3.006,3.392-6.043,5.481-9.117c2.087-3.07,4.112-5.98,6.071-8.726l29.372-42.941l41.355-0.026 l-44.061,62.748L187.977,197.935z"/>
+            </g>
+        </svg>
+        <span>Kai Orion's Blog</span>
+    </a>
+
+    <div class="actions">
+        <HctPickerIconButton></HctPickerIconButton>
+        <SwitchThemeIconButton></SwitchThemeIconButton>
+    </div>
+
+</header>
+
+<HctPickerDialog></HctPickerDialog>
+
+<style>
+    @reference "tailwindcss";
+    @reference "../../styles/global.css";
+
+    .page-header {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: 1fr;
+        height: 56px;
+        box-sizing: border-box;
+        align-items: center;
+
+        & a {
+            @apply emphasized-title-medium;
+
+            display: inline-flex;
+            width: fit-content;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            color: var(--md-sys-color-primary);
+            align-items: center;
+
+            transition-property: text-underline-offset;
+            transition-duration: 150ms;
+
+            &:hover {
+                text-underline-offset: 4px;
+            }
+
+            &>span {
+                margin-inline-start: 12px;
+            }
+
+        }
+    }
+
+</style>

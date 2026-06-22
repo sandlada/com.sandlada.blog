@@ -1,0 +1,16 @@
+---
+import NotoSans from './NotoSans.astro'
+import NotoSansSC from './NotoSansSC.astro'
+import NotoSansTC from './NotoSansTC.astro'
+
+interface Props {
+    language: 'english' | 'traditional-chinese' | 'simplified-chinese'
+}
+
+const { language } = Astro.props
+
+---
+
+{language === 'english' && <NotoSans></NotoSans>}
+{language === 'simplified-chinese' && <NotoSansSC></NotoSansSC>}
+{language === 'traditional-chinese' && <NotoSansTC></NotoSansTC>}

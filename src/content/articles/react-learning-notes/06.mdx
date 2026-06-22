@@ -1,0 +1,61 @@
+---
+id: "nsysHpD9k2cSvO2Asabdu"
+category: "react-learning-notes"
+order: 6
+
+meta:
+    title: "React Learning Day 6: React Redux Part 2"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "redux", "state", "reducer", "createSlice"]
+    publishedAt: 2025-8-2
+    createdAt: 2025-8-2
+    updatedAt: 2025-8-2
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+
+# React Learning Day 5: React Redux Part 2
+
+## createSlice - prepare - Preparing Action Payloads
+
+createSlice的reducers對象的元素除了是`reducer`函數，來可以是`{reducer, prepare}`對象。
+
+`prepare`的返回值是`reducer`的action參數。
+
+```typescript
+add: {
+    prepare: (firstName: string, lastName: string) => {
+        return { payload:  firstName + ' ' + lastName}
+    },
+    reducer: (state, action: PayloadAction<string>) => {
+        state.items.push(action.payload)
+    },
+}
+```
+
+當add時，應使用prepare的參數列表:
+
+```typescript
+dispatch(add('first-name', 'last-name'))
+```
+
+## createSlice - extraReducers - Handle Other Actions
+
+extraReducers接受一個參數為`builder: ActionReducerMapBuilder<State>`的函數。`builder`提供3個方法:
+
+- addMatcher
+- addCase
+- addDefaultCase

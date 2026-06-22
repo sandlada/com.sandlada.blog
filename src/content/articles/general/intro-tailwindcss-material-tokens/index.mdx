@@ -1,0 +1,277 @@
+---
+id: "xUTaWvVq0vMXVA-Px9GeW"
+category: "general"
+order: 1
+
+hasOverview: true
+overview: "这篇文章展示了如何使用 @glare-labs/tailwindcss-material-tokens 插件在 Tailwind CSS 项目中应用 Material 3 的颜色、排版、阴影、边框、形状等设计元素。文章还提供了插件的安装和使用指南，并包含了示例代码和指向 StackBlitz 示例的链接。"
+
+meta:
+    title: "通過@glare-labs/tailwindcss-material-tokens在tailwindcss中使用Material3令牌"
+    description: "这篇文章介绍了 @glare-labs/tailwindcss-material-tokens，一个 Tailwind CSS 插件，它允许你在 Tailwind CSS 项目中使用 Material 3 设计令牌。"
+    author: "kai-orion"
+    keywords: [
+        "Material Design",
+        "Material You",
+        "material3",
+        "tailwindcss",
+        "design-system",
+        "css-framework",
+        "web-development",
+        "frontend-development",
+        "plugin",
+        "tutorial",
+        "前端",
+        "M3",
+        "設計系統",
+        "插件",
+        "網頁開發",
+        "材制設計",
+    ]
+    publishedAt: 2025-01-22
+    createdAt: 2025-01-22
+    updatedAt: 2025-01-22
+    language: "zh_Hant"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: ./intro-tailwindcss-material-tokens.png
+    alt: ''
+---
+
+# 通過@glare-labs/tailwindcss-material-tokens 在 tailwindcss 中使用 Material3 令牌
+
+`@glare-labs/tailwindcss-material-tokens`是一個 **tailwindcss 插件**，它提供 **Material3 令牌類名**。例如 text-on-primary，bg-primary 等。
+
+具體的插件內容包括:
+
+- Colors
+- Typography
+- Elevation
+- Outline/Border
+- Shapes
+- Motions
+- Window Sizing Media Queries
+- Sizing
+
+如果你還不知道 Material 3 的令牌是什麼，請拜訪 [Material 3 Static color schemes 頁面](https://m3.material.io/styles/color/static/baseline)。
+
+有關此插件的更多信息，請拜訪`@glare-labs/tailwindcss-material-tokens`的[Github 頁面](https://github.com/glare-labs/tailwindcss-material-tokens)。
+
+## 下載
+
+此插件發布在 npm 上。
+
+```powershell
+npm i -D @glare-labs/tailwindcss-material-tokens
+```
+
+## 導入插件
+
+```typescript
+import { provideAll } from "@glare-labs/tailwindcss-material-tokens";
+
+const all = provideAll();
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [...all.getAllPlugins()],
+};
+```
+
+## 使用
+
+### 顏色 Colors
+
+顏色遵循 Material 3 Static color schemes:
+
+- primary-palette-key-color
+- secondary-palette-key-color
+- tertiary-palette-key-color
+- neutral-palette-key-color
+- neutral-variant-palette-key-color
+- background
+- on-background
+- surface
+- surface-dim
+- surface-bright
+- surface-container-lowest
+- surface-container-low
+- surface-container
+- surface-container-high
+- surface-container-highest
+- on-surface
+- surface-variant
+- on-surface-variant
+- inverse-surface
+- inverse-on-surface
+- shadow
+- scrim
+- surface-tint
+- primary
+- on-primary
+- primary-container
+- on-primary-container
+- inverse-primary
+- secondary
+- on-secondary
+- secondary-container
+- on-secondary-container
+- tertiary
+- on-tertiary
+- tertiary-container
+- on-tertiary-container
+- error
+- on-error
+- error-container
+- on-error-container
+- primary-fixed
+- primary-fixed-dim
+- on-primary-fixed
+- on-primary-fixed-variant
+- secondary-fixed
+- secondary-fixed-dim
+- on-secondary-fixed
+- on-secondary-fixed-variant
+- tertiary-fixed
+- tertiary-fixed-dim
+- on-tertiary-fixed
+- on-tertiary-fixed-variant
+
+文字顏色(color)以`text-`開頭，例如`text-on-primary`，`text-on-secondary`，`text-error`。背景顏色以`bg-`開頭，例如`bg-primary`，`bg-secondary`，`bg-error`。
+
+```html
+<div class="p-2 w-fit h-fit text-on-primary bg-primary">
+  OnPrimary on Primary
+</div>
+
+<div class="p-2 w-fit h-fit text-on-primary-container bg-primary-container">
+  OnPrimaryContainer on PrimaryContainer
+</div>
+
+<div class="p-2 w-fit h-fit text-on-surface bg-surface">
+  OnSurface on Surface
+</div>
+```
+
+### 排版 Typography
+
+Typography 以`text-`開頭，包括:
+
+- display-large
+- display-medium
+- display-small
+- headline-large
+- headline-medium
+- headline-small
+- title-large
+- title-medium
+- title-small
+- body-large
+- body-medium
+- body-small
+- label-large
+- label-medium
+- label-small
+
+```html
+<p class="text-display-large">display-large</p>
+<p class="text-display-medium">display-medium</p>
+<p class="text-display-small">display-small</p>
+<p class="text-headline-large">headline-large</p>
+<p class="text-headline-medium">headline-medium</p>
+<p class="text-headline-small">headline-small</p>
+<p class="text-title-large">title-large</p>
+<p class="text-title-medium">title-medium</p>
+<p class="text-title-small">title-small</p>
+<p class="text-body-large">body-large</p>
+<p class="text-body-medium">body-medium</p>
+<p class="text-body-small">body-small</p>
+<p class="text-label-large">label-large</p>
+<p class="text-label-medium">label-medium</p>
+<p class="text-label-small">label-small</p>
+```
+
+### 層級 Elevation
+
+Elevation 以`elevation-`開頭，包括:
+
+- elevation-none
+- elevation-1
+- elevation-2
+- elevation-3
+- elevation-4
+- elevation-5
+
+```html
+<span class="w-24 h-24 inline-block elevation-none"></span>
+<span class="w-24 h-24 inline-block elevation-1"></span>
+<span class="w-24 h-24 inline-block elevation-2"></span>
+<span class="w-24 h-24 inline-block elevation-3"></span>
+<span class="w-24 h-24 inline-block elevation-4"></span>
+<span class="w-24 h-24 inline-block elevation-5"></span>
+```
+
+### 邊框 Border/Outline
+
+Border/Outline 以`border-`/`outline`開頭，Border/Outline 的顏色包括:
+
+- outline
+- outline-variant
+
+```html
+<span class="border border-outline">border-outline</span>
+<span class="border border-outline-variant">border-outline-variant</span>
+<span class="outline outline-outline">outline-outline</span>
+<span class="outline outline-outline-variant">outline-outline-variant</span>
+```
+
+### 形狀 Shapes
+
+Shapes 以`shape`開頭，包括:
+
+- full
+- extra
+- large
+- medium
+- small
+- extraSmall
+- none
+
+每個形狀可細分為 4 面和 4 角:
+
+- t
+- r
+- b
+- l
+- tl
+- tr
+- bl
+- br
+
+```html
+<div class="w-24 h-24 shape-full"></div>
+<div class="w-24 h-24 shape-full-t"></div>
+<div class="w-24 h-24 shape-full-r"></div>
+<div class="w-24 h-24 shape-full-b"></div>
+<div class="w-24 h-24 shape-full-l"></div>
+<div class="w-24 h-24 shape-full-tl"></div>
+<div class="w-24 h-24 shape-full-tr"></div>
+<div class="w-24 h-24 shape-full-bl"></div>
+<div class="w-24 h-24 shape-full-br"></div>
+```
+
+## 用例
+
+| 項目                |                                                                                                   鏈結 |
+| :------------------ | -----------------------------------------------------------------------------------------------------: |
+| Astro + Tailwindcss | [StackBlitz Link](https://stackblitz.com/edit/withastro-astro-2rp4sdfe?file=src%2Fpages%2Findex.astro) |

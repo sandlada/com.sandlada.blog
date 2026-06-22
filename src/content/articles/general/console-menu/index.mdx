@@ -1,0 +1,391 @@
+---
+id: "YD21YBlDyhMP9B2Z56qy6"
+category: "general"
+order: 1
+
+meta:
+    title: "通過Python構建簡易交互式控制台菜單"
+    description: "學習如何使用Python和pynput函式庫，從零開始打造一個可透過鍵盤導航的交互式控制台菜單。"
+    author: "kai-orion"
+    keywords: [
+        "python",
+        "console",
+        "console-project",
+        "console-menu"
+    ]
+    publishedAt: 2025-8-1
+    createdAt: 2025-8-1
+    updatedAt: 2025-8-1
+    language: "zh_Hant"
+
+hasOverview: true
+overview: "本文深入探討了如何從零開始構建一個交互式 Python 控制台菜單。我們將核心聚焦於一個關鍵的架構決策：使用扁平化的路徑列表 (list[MenuItem]) 代替傳統的嵌套字典，這種設計讓菜單的層級篩選和狀態管理變得異常簡單。我們將運用函數式編程的思想 (compose) 構建一個名為 use_menu 的核心狀態管理器，並結合 pynput 函式庫來實現靈敏的鍵盤交互。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: false
+cover:
+    image: null
+    alt: ""
+---
+
+# 通過Python構建簡易交互式控制台菜單
+
+在這篇文章中，您將通過Python創建一個基於上下以控制選項，空格或回車以選擇的簡易的控制臺菜單。
+
+## 先決條件
+
+_作者的Python版本號為3.13。_
+
+1. 創建Python項目
+2. 安裝pynput
+
+## 構思
+
+### 菜單選項
+
+控制臺菜單最基礎的内容是控制臺菜單的選項。例如：
+
+- Profile
+- Settings
+
+每個選項都有可能存在幾個子菜單，例如我選擇Profile后：
+
+- Email
+- Password
+
+通過如上信息，我們可以發現，菜單存在這樣一種結構：
+
+```py
+{
+    'Root': {
+        'Profile': {
+            'Email': {},
+            'Password': {}
+        },
+        'Settings': {}
+    }
+}
+```
+
+爲了降低複雜度，作者沒有選擇嵌套的類json格式的數據結構，而是選擇了經過了扁平化的字符串數組的數據結構：
+
+```py
+[
+    ['home'],
+    ['home', 'profile'],
+    ['home', 'profile', 'Email'],
+    ['home', 'profile', 'Password'],
+    ['home', 'settings'],
+]
+```
+
+考慮到自定義代碼，選擇一個選項后需要運行自定義代碼，例如選擇Email選項后，進入Email的程序。對應代碼作爲action參數：
+
+```py
+paths = [
+    { 'path': ['home'] },
+    { 'path': ['home', 'profile'] },
+    { 'path': ['home', 'profile', 'Email'], 'action': lambda: print('模擬 Email 程序運行') },
+    { 'path': ['home', 'profile', 'Display Name'] },
+    { 'path': ['home', 'profile', 'Password'] },
+    { 'path': ['home', 'settings'] },
+    { 'path': ['home', 'settings', 'Secure'] },
+    { 'path': ['home', 'settings', 'Appearance'] },
+]
+```
+
+### 選項控制
+
+既然是基於控制臺的菜單，那麽控制菜單的有效辦法之一就是通過鍵盤。我們監聽鍵盤按鍵（例如上、下）的按動，對照按下的按鍵運行對應的邏輯即可。
+
+|按鍵|邏輯|
+|:--|:--|
+|上和下|切換選項|
+|空格或回車|選擇|
+|backspace|返回|
+|esc|退出程序|
+
+其對應的代碼邏輯大致如下：
+
+```py
+match key:
+    case keyboard.Key.up:
+        handle_key_up()
+    case keyboard.Key.down:
+        handle_key_down()
+    case keyboard.Key.space | keyboard.Key.enter:
+        handle_key_enter()
+    case keyboard.Key.backspace:
+        handle_key_backspace()
+    case keyboard.Key.esc:
+        return False
+```
+
+## 具體實現
+
+### 基礎類型
+
+存在以下基礎的類型：
+
+```py
+"""
+代表一個選項的層級結構
+['home', 'profile']表示profile在home之後，且profile是第二層，home是第一層
+"""
+type Path = list[str]
+
+"""
+代表選項在被選擇後的回調函數
+"""
+type Action = Callable[[], None]
+
+"""
+表示選項的層數
+"""
+type Depth = int
+
+"""
+表示選項
+"""
+class MenuItem(TypedDict):
+    path: Path
+    action: NotRequired[Action]
+
+```
+
+### 輔助工具
+
+#### by_depth & by_starting_with
+
+因爲我們的`MenuItem`的數據結構分爲`path`和`action`，其中`path`以字符串數組組成，所以我們需要以下兩種查詢方式：
+
+- 通過第幾列查詢 get_items_by_depth
+- 通過前綴查詢 get_items_by_starting_with
+
+```py
+# 通過列（深度或層）查詢
+def get_items_by_depth(depth: Depth,  items: list[MenuItem]) -> list[MenuItem]:
+    return [ item for item in items if len(item['path']) == depth ]
+
+# 通過前綴查詢
+def get_items_by_starting_with(starting_with: Path, items: list[MenuItem]):
+    if not starting_with:
+        return items[:]
+    starting_with_len = len(starting_with)
+    return [ item for item in items if starting_with_len <= len(item['path']) and item['path'][:starting_with_len] == starting_with ]
+
+# get_items_by_depth的函數式版本，配合下文的compose使用
+def by_depth(depth: Depth) -> Callable[[list[MenuItem]], list[MenuItem]]:
+    return lambda items: get_items_by_depth(depth, items)
+
+# get_items_by_starting_with的函數式版本，配合下文的compose使用
+def by_starting_with(starting_with: Path):
+    return lambda items: get_items_by_starting_with(starting_with, items)
+```
+
+#### compose
+
+`compose`接受一個或多個函數，函數式地執行每一個參數並返回`list[MenuItem]`。
+
+```py
+def compose(
+    # 接受一個或多個函數，這些函數返回一個接受list[MenuItem]且返回list[MenuItem]的函數
+    *functions: Callable[[list[MenuItem]], list[MenuItem]]
+) -> Callable[[list[MenuItem]], list[MenuItem]]:
+    def run(items: list[MenuItem]) -> list[MenuItem]:
+        _items: list[MenuItem] = items
+        for function in functions:
+            _items = function(_items)
+        return _items
+
+    return run
+```
+
+### 核心邏輯
+
+我們通過use_menu函數創建菜單上下文，通過該上下文即可進行菜單的選擇、返回等操作。
+
+#### use_menu的輸入參數
+
+use_menu默認從第一層`depth=1`且`starting_with為[]`開始查找，相當於：
+
+```py
+compose(
+    by_depth(1),
+    by_starting_with([])
+)(items)
+```
+
+```py
+class UseMenuOptions(TypedDict):
+    # 默認值為 []
+    default_starting_with: NotRequired[Path]
+
+    # 默認值為 1
+    default_depth: NotRequired[Depth]
+
+    items: list[MenuItem]
+```
+
+#### use_menu的返回值
+
+```py
+class UseMenuReturnType(NamedTuple):
+    """
+    設置菜單當前所在的行
+    mode=offset時，int表示偏移量
+    mode=override時，int會覆蓋原有值
+    """
+    set_current_line_number: Callable[[int, Literal['offset', 'override']], None]
+
+    # 獲取當前菜單選項
+    get_current_menu: Callable[[], list[MenuItem]]
+
+    # 返回上一級
+    go_back: Callable[[], None]
+
+    # 當前選項的下一級
+    go: Callable[[], None]
+
+    # 輸出選項
+    print_current_menu: Callable[[], None]
+```
+
+#### use_menu的實現
+
+```py
+def use_menu(config: UseMenuOptions):
+    all_menu_items: Final[list[MenuItem]] = config.get('items', [])
+    current_path: Path = config.get('default_starting_with', [])
+    current_depth: Depth = config.get('default_depth', 1)
+    current_line_number: int = 0
+
+    def get_current_menu() -> list[MenuItem]:
+        nonlocal current_path, current_depth
+        filter_pipeline = compose(
+            by_starting_with(current_path),
+            by_depth(current_depth)
+        )
+        return filter_pipeline(all_menu_items)
+
+    def set_current_depth(value: int, mode: Literal['offset', 'override']) -> None:
+        nonlocal current_depth
+        if mode == 'override':
+            current_depth = value
+        else:
+            current_depth += value
+        if current_depth < 1:
+            current_depth = 1
+
+    def set_current_line_number(value: int, mode: Literal['offset', 'override']) -> None:
+        nonlocal current_line_number
+
+        if mode == 'override':
+            current_line_number = value
+        else:
+            current_line_number += value
+
+        menu_size = len(get_current_menu())
+        if menu_size == 0:
+            current_line_number = 0
+            return
+
+        current_line_number %= menu_size
+
+    def print_current_menu() -> None:
+       for index, item in enumerate(get_current_menu()):
+            display_name = item['path'][-1]
+            prefix = '->' if current_line_number == index else '  '
+            print(f'{prefix}  \t{display_name}')
+
+    def go_back() -> None:
+        nonlocal current_path, current_depth, current_path
+        set_current_depth(-1, 'offset')
+        if current_path:
+            current_path.pop()
+        set_current_line_number(0, 'override')
+
+    def go() -> None:
+        nonlocal current_path, current_depth, all_menu_items
+
+        current_menu = get_current_menu()
+
+        if not current_menu:
+            return
+
+        selected_line = current_menu[current_line_number]
+        selected_path_segment = selected_line['path'][-1]
+        set_current_depth(1, 'offset')
+        current_path.append(selected_path_segment)
+        print(current_path, current_depth)
+        new_menu = get_current_menu()
+
+        if not new_menu:
+            current_path.pop()
+            set_current_depth(-1, 'offset')
+            if action := selected_line.get('action'):
+                action()
+        else:
+            set_current_line_number(0, 'override')
+
+    return UseMenuReturnType(
+        set_current_line_number=set_current_line_number,
+        get_current_menu=get_current_menu,
+        go_back=go_back,
+        go=go,
+        print_current_menu=print_current_menu,
+    )
+```
+
+#### main函數
+
+```py
+items: list[MenuItem] = [
+    { 'path': ['home']},
+    { 'path': ['home', 'profile']},
+    { 'path': ['home', 'profile', 'Email'], 'action': lambda: print('Email SCRIPT RUN')},
+    { 'path': ['home', 'profile', 'Display Name']},
+    { 'path': ['home', 'profile', 'Password']},
+    { 'path': ['home', 'settings']},
+    { 'path': ['home', 'settings', 'Secure']},
+    { 'path': ['home', 'settings', 'Appearance']},
+]
+
+def main() -> None:
+    config = use_menu(config=UseMenuOptions(items=items, default_depth=2))
+
+    def handle_key_enter() -> None:
+        config.go()
+    def handle_key_backspace():
+        config.go_back()
+    def handle_key_up():
+        config.set_current_line_number(-1, 'offset')
+    def handle_key_down():
+        config.set_current_line_number(1, 'offset')
+
+    def handleKeyboardPress(key: (keyboard.Key | keyboard.KeyCode | None)) -> None | bool:
+        match key:
+            case keyboard.Key.up:
+                handle_key_up()
+            case keyboard.Key.down:
+                handle_key_down()
+            case keyboard.Key.space | keyboard.Key.enter:
+                handle_key_enter()
+            case keyboard.Key.backspace:
+                handle_key_backspace()
+            case keyboard.Key.esc:
+                return False
+        clear_console()
+        config.print_current_menu()
+
+    clear_console()
+    config.print_current_menu()
+    with keyboard.Listener(on_press=handleKeyboardPress) as listener: # type: ignore
+        listener.join()
+
+main()
+```

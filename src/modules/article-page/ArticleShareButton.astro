@@ -1,0 +1,58 @@
+---
+import ShareS from '@material-design-icons/svg/round/share.svg?raw'
+import CheckS from '@material-design-icons/svg/round/check.svg?raw'
+---
+
+<mdc-button variant="text" trailing-icon id="share-article-link-button" size="medium" aria-label="Click this button to copy the link of the current page.">
+    <span>Copy Link</span>
+    <mdc-icon slot="icon" class="share active" set:html={ShareS}></mdc-icon>
+    <mdc-icon slot="icon" class="check" set:html={CheckS}></mdc-icon>
+</mdc-button>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+        const button = document.querySelector(`#share-article-link-button`)
+        const shareIcon = button?.querySelector(`.share`)
+        const checkIcon = button?.querySelector(`.check`)
+
+        if(!button || !shareIcon || !checkIcon) {
+            return
+        }
+
+        if(!navigator.clipboard) {
+            console.warn(`Your Borwser don't support Clipboard API.`)
+            button.remove()
+            return
+        }
+
+        let pass = true
+
+        button.addEventListener('click', async () => {
+            if(!pass) {
+                return
+            }
+            pass = false
+            const urlToCopy = window.location.href
+            await navigator.clipboard.writeText(urlToCopy)
+            shareIcon.classList.remove('active')
+            checkIcon.classList.add('active')
+            await new Promise(resolve => setTimeout(() => {
+                shareIcon.classList.add('active')
+                checkIcon.classList.remove('active')
+                resolve()
+            }, 2000))
+            pass = true
+        })
+    })
+</script>
+
+<style>
+    #share-article-link-button {
+        & mdc-icon.active {
+            display: block;
+        }
+        & mdc-icon:not(.active) {
+            display: none;
+        }
+    }
+</style>

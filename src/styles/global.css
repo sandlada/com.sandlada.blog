@@ -1,0 +1,33 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "@sandlada/material-design-css/color/tw.css";
+@import "@sandlada/material-design-css/motion/tw.css";
+@import "@sandlada/material-design-css/shape/tw.css";
+@import "@sandlada/material-design-css/spacing/tw.css";
+@import "@sandlada/material-design-css/typography/tw.css";
+
+@layer base {
+    :root {
+        background: var(--md-sys-color-surface);
+        scroll-behavior: smooth;
+    }
+
+    body {
+        margin: 0;
+    }
+
+    [hidden] {
+        display: none;
+    }
+
+}
+
+@theme {
+    --breakpoint-sm: 600px;
+    --breakpoint-md: 720px;
+    --breakpoint-lg: 840px;
+    --breakpoint-xl: 1200px;
+
+}

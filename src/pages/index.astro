@@ -1,0 +1,82 @@
+---
+import PageHeader from "../components/page-header/PageHeader.astro";
+import RootHTMLLayout from "../layouts/RootHTMLLayout.astro";
+import { Article } from "../modules/article/Article";
+import ArticleCard from "../modules/article/ArticleCard.astro";
+import TheLatestArticleShow from "../modules/article/TheLatestArticleShow.astro";
+import NavigationBar from "../components/navigation/NavigationBar.astro";
+import NavigationRail from "../components/navigation/NavigationRail.astro";
+import PageMeta from "@sandlada/astro-page-meta/PageMeta.astro";
+import BlogIcon from "../../public/blog-icon.svg"
+import WebsiteCover from "../../public/website-cover.png"
+import NavigationablePageLayout from "../layouts/NavigationablePageLayout.astro";
+import PageFooter from "../components/page-footer/PageFooter.astro";
+
+const allArticles = (await Article.GetAllArticles()).filter(article => article.data.status.isVisible)
+const sortedArticles = Article.SortByPublishTime(allArticles)
+
+const articleOrganized = {
+    theLatestArticle: sortedArticles.slice(0, 4),
+    featuredArticles: allArticles.filter(e => e.data.status.isFeatured),
+}
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
+const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Kai Orion's Blog",
+    "url": "https://blog.sandlada.com",
+    "logo": WebsiteCover.src
+}
+---
+
+<RootHTMLLayout lang="zh-Hants">
+
+    <script slot="before-head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
+
+    <PageMeta
+        slot="head"
+        title="Kai Orion's Blog"
+        keywords="sandlada, kai-orion, blog, key-note"
+        description="A blog focusing on front-end development and personal hobbies. Study notes, hobbies and interests!"
+        ogType="website"
+        author="Kai Orion"
+        url={canonicalUrl.href}
+        twitterCard="summary"
+        robots="index, follow"
+        icon={BlogIcon}
+        image={WebsiteCover}
+        imageAlt="A website icon with the word Blog written in the center."
+    ></PageMeta>
+
+    <NavigationablePageLayout slot="body">
+        <NavigationBar slot="navigation-bar"></NavigationBar>
+        <NavigationRail slot="navigation-rail"></NavigationRail>
+        <div slot="content">
+
+            <PageHeader></PageHeader>
+
+            <h2 class="headline-small md:headline-medium lg:headline-large">Our Latest Articles</h2>
+            <TheLatestArticleShow theLatestArticle={articleOrganized.theLatestArticle}></TheLatestArticleShow>
+
+            <h2 class="mt-space headline-small md:headline-medium lg:headline-large">Featured Articles</h2>
+            {
+                articleOrganized.featuredArticles.map(article => (
+                    <ArticleCard article={article}></ArticleCard>
+                ))
+            }
+
+            <PageFooter></PageFooter>
+        </div>
+    </NavigationablePageLayout>
+</RootHTMLLayout>
+
+<script>
+    import "@sandlada/mdc/build/components/icon-button/icon-button.js";
+</script>
+
+<style>
+    .mt-space {
+        margin-block-start: 48px;
+    }
+</style>

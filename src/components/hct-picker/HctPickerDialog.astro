@@ -1,0 +1,276 @@
+---
+const VariantMapping = [
+    [0, 'Monochrome'],
+    [1, 'Neutral'],
+    [2, 'Tonal Spot'],
+    [3, 'Vibrant'],
+    [4, 'Expressive'],
+    [5, 'Fidelity'],
+    [6, 'Content'],
+    [7, 'Rainbow'],
+    [8, 'Fruit Salad']
+] as const
+---
+
+<mdc-basic-dialog id="hct-picker-dialog">
+
+    <h3 slot="headline">HCT Picker</h3>
+
+    <form slot="content" id="hct-picker-dialog-form" class="content">
+
+        <md-outlined-select name="variant" labeled label="Variant">
+            {VariantMapping.map(([value, label]) => (
+                <md-select-option value={value}>
+                    <div slot="headline">{label}</div>
+                </md-select-option>
+            ))}
+        </md-outlined-select>
+
+        <div id="h-preview"></div>
+        <md-slider min="0" max="360" name="h" labeled value="0"></md-slider>
+
+        <div id="c-preview"></div>
+        <md-slider min="0" max="120" name="c" labeled value="60"></md-slider>
+
+        <div id="t-preview"></div>
+        <md-slider min="0" max="100" name="t" labeled value="50"></md-slider>
+
+        <label class="item">
+            <span>Contrast Level</span>
+            <md-slider min="-1" max="1" steo="1" name="cl" labeled ticks value="0"></md-slider>
+        </label>
+
+
+        <md-outlined-select name="spec-version" labeled label="Spec Version">
+            <md-select-option value="2021">
+                <div slot="headline">2021</div>
+            </md-select-option>
+            <md-select-option value="2025">
+                <div slot="headline">2025</div>
+            </md-select-option>
+        </md-outlined-select>
+    </form>
+
+    <div slot="actions">
+        <mdc-button type="submit" form="hct-picker-dialog-form">
+            <span>OK</span>
+        </mdc-button>
+    </div>
+
+
+</mdc-basic-dialog>
+
+<script type="module" is:inline>
+    import { Hct, TonalPalette, hexFromArgb } from '@material/material-color-utilities'
+import { ContextSymbol } from '@sandlada/document-context'
+
+    document.addEventListener('DOMContentLoaded', () => {
+        /**
+         * @type {HTMLFormElement}
+         */
+        const form = document.querySelector('#hct-picker-dialog-form')
+
+        /** @type {HTMLInputElement} */
+        const hSlider = form.querySelector('md-slider[name="h"]')
+        /** @type {HTMLInputElement} */
+        const cSlider = form.querySelector('md-slider[name="c"]')
+        /** @type {HTMLInputElement} */
+        const tSlider = form.querySelector('md-slider[name="t"]')
+        /** @type {HTMLInputElement} */
+        const clSlider = form.querySelector('md-slider[name="cl"]')
+        /** @type {HTMLInputElement} */
+        const variantSelect = form.querySelector('md-outlined-select[name="variant"]')
+        /** @type {HTMLInputElement} */
+        const specVersionSelect = form.querySelector('md-outlined-select[name="spec-version"]')
+
+        /** @type {HTMLElement} */
+        const hPreview = form.querySelector('#h-preview')
+        /** @type {HTMLElement} */
+        const cPreview = form.querySelector('#c-preview')
+        /** @type {HTMLElement} */
+        const tPreview = form.querySelector('#t-preview')
+
+        const getHSliderValue = () => parseFloat(hSlider.value)
+        const getCSliderValue = () => parseFloat(cSlider.value)
+        const getTSliderValue = () => parseFloat(tSlider.value)
+        const getClSliderValue = () => parseInt(clSlider.value)
+        const getVariantSelectValue = () => parseInt(variantSelect.value)
+        const getSpecVersionSelectValue = () => parseInt(specVersionSelect.value)
+
+        const createHueGradiant = () => {
+            return `linear-gradient(to right, ${Array.from({ length: 361 }, (_, i) => {
+                const palette = TonalPalette.fromHct(Hct.from(i, 100, 50))
+                const hexColor = hexFromArgb(palette.tone(50))
+                return hexColor
+            }).join(', ')})`
+        }
+        const createChromaGradiant = (h, t) => {
+            return `linear-gradient(to right, ${Array.from({ length: 121 }, (_, i) => {
+                const palette = TonalPalette.fromHct(Hct.from(h, i, t))
+                const hexColor = hexFromArgb(palette.tone(50))
+                return hexColor
+            }).join(', ')})`
+        }
+        const createToneGradiant = (h, c) => {
+            return `linear-gradient(to right, ${Array.from({ length: 101 }, (_, i) => {
+                const palette = TonalPalette.fromHct(Hct.from(h, c, i))
+                const hexColor = hexFromArgb(palette.tone(50))
+                return hexColor
+            }).join(', ')})`
+        }
+
+        let timer = null
+        const updateColor = (skipThemeGeneration = false) => {
+            if(timer) {
+                clearTimeout(timer)
+                timer = null
+            }
+
+            timer = setTimeout(() => {
+                /** Update Previews */
+                const h = getHSliderValue()
+                const c = getCSliderValue()
+                const t = getTSliderValue()
+
+                if(!hPreview.hasAttribute('already-updated')) {
+                    hPreview.style.setProperty('background', createHueGradiant())
+                    hPreview.setAttribute('already-updated', '')
+                }
+                cPreview.style.setProperty('background', createChromaGradiant(h, t))
+                tPreview.style.setProperty('background', createToneGradiant(h, c))
+
+                /** Update Config */
+                const paletteArgb = Hct.from(h, c, t).toInt()
+                document[ContextSymbol].themeConfig.sourceColorArgb = paletteArgb
+                const cl = getClSliderValue()
+                document[ContextSymbol].themeConfig.contrastLevel = cl
+                const variant = getVariantSelectValue()
+                document[ContextSymbol].themeConfig.variant = variant
+                const specVersion = getSpecVersionSelectValue()
+                document[ContextSymbol].themeConfig.specVersion = specVersion.toString()
+
+                /** Generation */
+                if(skipThemeGeneration)  return
+
+                document.dispatchEvent(new Event('theme:save-changes'))
+                document.dispatchEvent(new Event('theme:generate'))
+
+                if(timer) {
+                    clearTimeout(timer)
+                    timer = null
+                }
+            }, 25)
+        }
+
+        const updateSliderAndPreviewHiddenAttribute = () => {
+            const variant = getVariantSelectValue()
+            /**
+             * @typedef {'enabled' | 'disabled' | 'disabled-and-hidden'} HctState
+             * @type {[HctState, HctState, HctState]}
+             * */
+            let hctState = ['enabled', 'enabled', 'enabled']
+            switch(variant) {
+                case 0: // Monochrome
+                    hctState = ['disabled-and-hidden', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 1: // Neutral
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 2: // Tonal Spot
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 3: // Vibrant
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 4: // Expressive
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 5: // Fidelity
+                    hctState = ['enabled', 'enabled', 'enabled']
+                    break
+                case 6: // Content
+                    hctState = ['enabled', 'enabled', 'enabled']
+                    break
+                case 7: // Rainbow
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+                case 8: // Fruit Salad
+                    hctState = ['enabled', 'disabled-and-hidden', 'disabled-and-hidden']
+                    break
+            }
+
+            hSlider.toggleAttribute('hidden', hctState[0] === 'disabled-and-hidden')
+            hPreview.toggleAttribute('hidden', hctState[0] === 'disabled-and-hidden')
+            cSlider.toggleAttribute('hidden', hctState[1] === 'disabled-and-hidden')
+            cPreview.toggleAttribute('hidden', hctState[1] === 'disabled-and-hidden')
+            tSlider.toggleAttribute('hidden', hctState[2] === 'disabled-and-hidden')
+            tPreview.toggleAttribute('hidden', hctState[2] === 'disabled-and-hidden')
+        }
+
+        // Theme Config
+        form.addEventListener('input', () => updateColor(false))
+
+        // Variant and HCT
+        variantSelect.addEventListener('change', () => {
+            updateSliderAndPreviewHiddenAttribute()
+        })
+
+        // Init
+        const sourceColorHctArray = Hct.fromInt(document[ContextSymbol].themeConfig.sourceColorArgb)
+        hSlider.value = sourceColorHctArray.hue.toString()
+        cSlider.value = sourceColorHctArray.chroma.toString()
+        tSlider.value = sourceColorHctArray.tone.toString()
+        clSlider.value = document[ContextSymbol].themeConfig.contrastLevel.toString()
+        variantSelect.selectIndex(document[ContextSymbol].themeConfig.variant)
+        specVersionSelect.selectIndex(document[ContextSymbol].themeConfig.specVersion === "2021" ? 0 : 1)
+        updateColor(true)
+        updateSliderAndPreviewHiddenAttribute()
+    })
+</script>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+        /**
+         * @type {HTMLElement}
+         */
+        const dialog = document.querySelector('mdc-basic-dialog')
+
+        document.addEventListener('hct-picker-dialog:open', () => {
+            dialog.show()
+        })
+    })
+</script>
+
+<style>
+    @reference "../../styles/global.css";
+
+    .content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #h-preview, #c-preview, #t-preview {
+        width: 100%;
+        height: 24px;
+        margin-bottom: 8px;
+        border-radius: 4px;
+    }
+
+    .item {
+        margin-block-start: 12px;
+        display: flex;
+        flex-direction: column;
+        &>span {
+            padding-inline-start: 16px;
+            @apply label-medium;
+        }
+    }
+
+    [name="variant"] {
+        margin-bottom: 16px;
+    }
+    [name="spec-version"] {
+        margin-top: 16px;
+    }
+
+</style>

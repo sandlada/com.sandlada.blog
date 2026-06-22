@@ -1,0 +1,42 @@
+---
+import SearchS from '@material-design-icons/svg/round/search.svg?raw'
+import type { HTMLAttributes } from 'astro/types'
+
+type Props = HTMLAttributes<'div'>
+
+const props = Astro.props
+---
+
+<div class="search-bar" role="searchbox" aria-label="Type here to seach articles." {...props}>
+    <mdc-icon set:html={SearchS} aria-hidden="true"></mdc-icon>
+    <textarea role="search" class="input-touch-target body-medium" placeholder="Type here to seach" autocomplete="off"></textarea>
+</div>
+
+<style>
+    .search-bar {
+        display: grid;
+        grid-template-rows: 1fr;
+        grid-template-columns: 48px 1fr;
+        align-items: start;
+        box-sizing: border-box;
+        cursor: pointer;
+        background: var(--md-sys-color-surface-container);
+        padding-inline: 12px;
+        padding-block: 12px;
+        border-radius: 24px;
+        &>mdc-icon {
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        &>.input-touch-target {
+            /* all: unset; */
+            outline: none;
+            border: none;
+            background: none;
+            resize: vertical;
+            color: var(--md-sys-color-on-surface);
+            &:placeholder-shown {
+                color: var(--md-sys-color-on-surface-variant);
+            }
+        }
+    }
+</style>

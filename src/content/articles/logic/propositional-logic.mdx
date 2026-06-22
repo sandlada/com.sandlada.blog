@@ -1,0 +1,208 @@
+---
+id: "OL9xz3zu_PSPqVag4ds7y"
+category: "logic"
+order: 1
+
+meta:
+    title: "命題邏輯, 真值表 & 邏輯運算子"
+    description: ""
+    author: "kai-orion"
+    keywords: []
+    publishedAt: 2025-8-1
+    createdAt: 2025-8-1
+    updatedAt: 2025-8-1
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: false
+cover:
+    image: null
+    alt: ""
+---
+
+# 命題邏輯, 真值表 & 邏輯運算子
+
+## 命題
+
+一個命題是一個可以被判斷為 **真 True** 或 **假 False** 的陳述句。
+
+- P: 地球是圓的。
+- P: 蘋果是可食用的。
+- P: 如果今天下雨，我就不出門。
+
+這些最簡短的命題是原子命題。幾個原子命題可以通過邏輯運算子組合為複雜命題。
+
+- P: 如果今天不下雨並且商店開門，我就出門。
+
+## 真值表
+
+一個命題P可以是真或假:
+
+| 命題P |
+| :---- |
+| T     |
+| F     |
+
+另一個命題Q可以是真或假:
+
+| 命題Q |
+| :---- |
+| T     |
+| F     |
+
+兩個命題進行運算，以下文的AND為例(P與Q同時成立為真):
+
+| P    | Q    | P ∧ Q |
+| :--- | :--- | ----: |
+| T    | T    |     T |
+| T    | F    |     F |
+| F    | T    |     F |
+| F    | F    |     F |
+
+## 邏輯運算子
+
+### Negation: NOT ¬
+
+P: 今天天氣晴朗
+¬P: 今天天氣不晴朗
+
+### Conjunction: AND ∧
+
+P: 我帶了錢
+Q: 商店開著
+
+P ∧ Q: 我帶了錢並且商店開著
+
+| P    | Q    | P ∧ Q |
+| :--- | :--- | ----: |
+| T    | T    |     T |
+| T    | F    |     F |
+| F    | T    |     F |
+| F    | F    |     F |
+
+### Disjunction: Inclusive OR ∨
+
+P: 你會唱歌
+Q: 你會跳舞
+
+P ∨ Q: 你會唱歌或你會跳舞
+
+| P    | Q    | P ∨ Q |
+| :--- | :--- | ----: |
+| T    | T    |     T |
+| T    | F    |     T |
+| F    | T    |     T |
+| F    | F    |     F |
+
+### Disjunction: Exclusive XOR ⊕
+
+P: 你會唱歌
+Q: 你會跳舞
+
+P ⊕ Q: 要嘛你會唱歌，要嘛你會跳舞，但不能兩者都是
+
+| P    | Q    | P ⊕ Q |
+| :--- | :--- | ----: |
+| T    | T    |     F |
+| T    | F    |     T |
+| F    | T    |     T |
+| F    | F    |     F |
+
+### Conditional / Implication: IF...THEN... →
+
+`IF ... THEN ...`制定了一個規則並關注這個規則**是否違約**，它并不關注事件的前因後果和發生先後。
+
+例如`IF P THEN Q`，P是規則的觸發條件，Q是條件觸發後的必要動作，P → Q是規則的判定結果。如果P為假，那麼規則未觸發。如果P為真且Q為真，那麼規則已達成；如果P為真且Q為假，這視作違規。
+
+- 規則觸發且規則已達成 T
+  - P真 Q真
+- 規則未觸發 T
+  - P假 Q真
+  - P假 Q假
+- 違規 F
+  - P真 Q假
+
+在數學上，P是Q的充分條件，Q是P的必要條件:
+
+- 有P就保證有Q
+- 沒有Q就必然沒有P
+
+P: 我醒了
+Q: 我起床蓋被子
+
+`P → Q`用語言表達為"如果我醒了，我就起床蓋被子。"，但它實際指的是"醒來是觸發條件，蓋被子是觸發後的任務。只要我一醒來，我就必須蓋被子以完成任務。只要我沒有醒來，被子蓋不蓋與我無關。"。
+
+| P     | Q     | P → Q |
+| :---- | :---- | ----: |
+| T     | T     |     T |
+| **T** | **F** | **F** |
+| **F** | **T** | **T** |
+| **F** | **F** | **T** |
+
+### Biconditional: IF AND ONLY IF ↔
+
+`IF AND ONLY IF`制定了一對雙向的`IF...THEN...`規則，這兩個規則**必須同步**（同時成立或同時不成立）：
+
+```plantText
+(P → Q) ∧ (Q → P)
+```
+
+例如：
+
+- P: 我醒了
+- Q: 我起床了
+
+P ↔ Q: 我起床蓋被子，當且僅當我醒了。(P → Q)部分有一個結果爲假，(Q → P)部分也有一個結果爲假：
+
+- 我醒了，但我沒有起床
+- 我起床了，但我沒有醒
+
+除了以上2種情況，(P → Q)和(Q → P)的其它情況都爲真：
+
+- 我醒了，我起床了
+- 我沒有醒，我起床了
+- 我沒有醒，我沒有起床
+- 我起床，我醒了
+- 我沒有起床，我醒了
+- 我沒有起床，我沒有醒
+
+| P    | Q    | (P → Q) ∧ (Q → P) = P ↔ Q |
+| :--- | :--- | :------------------------ |
+| T    | T    | 真 ∧ 真 = 真              |
+| T    | F    | 假 ∧ 真 = 假              |
+| F    | T    | 真 ∧ 假 = 假              |
+| F    | F    | 真 ∧ 真 = 真              |
+
+整理后如下：
+
+| P     | Q     | P ↔ Q |
+| :---- | :---- | ----: |
+| T     | T     |     T |
+| T     | F     |     F |
+| F     | T     |     F |
+| **F** | **F** | **T** |
+
+**IF AND ONLY IF禁止了XOR的發生**。也就是:
+
+```plantText
+¬ (P ↔ Q) = (P ⊕ Q)
+```
+
+## 運算子的優先級
+
+| Priority | Name            | Shorthand      | Symbol |
+| :------- | :-------------- | :------------- | -----: |
+| 1        | Parentheses     | Parentheses    |     () |
+| 2        | Negation        | NOT            |      ¬ |
+| 3        | Conjunction     | AND            |      ∧ |
+| 4        | Disjunction XOR | XOR            |      ⊕ |
+| 5        | Disjunction OR  | OR             |      ∨ |
+| 6        | Implication     | IF...THEN...   |      → |
+| 7        | Biconditional   | IF AND ONLY IF |      ↔ |

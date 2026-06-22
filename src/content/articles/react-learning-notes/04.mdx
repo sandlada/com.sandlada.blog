@@ -1,0 +1,249 @@
+---
+id: "dzu7MJQuq-HMQ0Tl3BXZh"
+category: "react-learning-notes"
+order: 4
+
+meta:
+    title: "React Learning Day 4: Context"
+    description: ""
+    author: "kai-orion"
+    keywords: ["react", "context"]
+    publishedAt: 2025-8-2
+    createdAt: 2025-8-2
+    updatedAt: 2025-8-2
+    language: "zh_Hant"
+
+hasOverview: false
+overview: ""
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: false
+
+hasCover: false
+cover:
+    image: null
+    alt: ''
+---
+
+# React Learning Day 4: Context
+
+在組件樹中，Context提供向下的全局數據。context避免了複雜的props傳遞，特別是跨組件傳遞數據。
+
+## createContext
+
+createContext接受一個參數作為在沒有Provider時的缺省值。createContext提供2個核心組件:
+
+- Provider
+- Consumer
+
+```typescript
+type Provider<T> = ProviderExoticComponent<ProviderProps<T>>
+type Consumer<T> = ExoticComponent<ConsumerProps<T>>
+
+interface Context<T> extends Provider<T> {
+    Provider: Provider<T>
+    Consumer: Consumer<T>
+    displayName?: string | undefined
+}
+
+function createContext<T>(defaultValue: T): Context<T>
+```
+
+如下代碼通過createContext創建了react上下文，其缺省值為null：
+
+```typescript
+// 用於主題配置
+type Theme = {
+    isDark: boolean
+    sourceColor: string
+    contrast: number
+}
+// 通過這些type在reducer中修改主題配置
+type ThemeAction =
+    { type: 'set-is-dark', payload: boolean } |
+    { type: 'set-source-color', payload: string } |
+    { type: 'set-contrast', payload: number }
+
+
+const themeContext = createContext<[Theme,ActionDispatch<[action: ThemeAction]>]>(null)
+```
+
+## Provider
+
+Provider接受value作爲“向下提供context數據的來源”。
+
+如下代碼展示了如何創建一個Provider并提供默認數據:
+
+```tsx
+// 一個向下公開value和dispatch的組件
+const ThemeProvider = ({ children }) => {
+    const defaultValue: Theme = {
+        contrast: 0,
+        isDark: false,
+        sourceColor: 'red'
+    }
+    const reducer: Reducer<Theme, ThemeAction> = (state, action) => {
+        switch(action.type) {
+            case 'set-contrast': return ({ ...state, contrast: action.payload })
+            case 'set-is-dark': return ({ ...state, isDark: action.payload })
+            case 'set-source-color': return ({ ...state, sourceColor: action.payload })
+            default: throw new Error('Non-Supported Action.')
+        }
+    }
+    const [value, dispatch] = useReducer(reducer, defaultValue)
+    return <themeContext.Provider value={[value, dispatch]}>{children}</themeContext.Provider>
+}
+```
+
+## Consumer
+
+Consumer用於獲取最近的Provider提供的context數據。在組件樹中，如果Consumer沒有找到最近的Provider，Consumer就會使用`createContext`的缺省值。
+
+如下代碼通過Provider、Consumer來公開並使用數據
+
+```tsx
+const ShowConfig = (props: { themeDate: [Theme, ActionDispatch<[action: ThemeAction]>] }) => {
+    const [{ contrast, isDark, sourceColor }, _] = props.themeDate
+    return (
+        <div>
+            <p>Contrast: {contrast}</p>
+            <p>SourceColor: {sourceColor}</p>
+            <p>IsDark: {String(isDark)}</p>
+        </div>
+    )
+}
+
+const AddContrastButton = (props: { themeDate: [Theme, ActionDispatch<[action: ThemeAction]>]}) => {
+    const [{ contrast }, dispatch] = props.themeDate
+    return (
+        <button onClick={() => dispatch({type: 'set-contrast', payload: contrast + 1})}>Add Contrast</button>
+    )
+}
+
+const AppThemed = () => {
+    return (
+        <themeContext.Consumer>
+            {(value) => (
+                <>
+                    <ShowConfig themeDate={value}></ShowConfig>
+                    <AddContrastButton themeDate={value}></AddContrastButton>
+                </>
+            )}
+        </themeContext.Consumer>
+    )
+}
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <AppThemed></AppThemed>
+        </ThemeProvider>
+    )
+}
+```
+
+## useContext
+
+`useContext`是比Consumer更加便捷的獲取context的方式。
+
+```typescript
+function useContext<T>(context: Context<T>): T
+```
+
+`useContext`接受`createContext`返回的對象，返回由Provider提供的context數據或缺省值：
+
+```typescript
+const themeContext = createContext<[Theme,ActionDispatch<[action: ThemeAction]>]>(null)
+
+const useTheme = () => {
+    const ctx = useContext(themeContext)
+    if(!ctx) {
+        throw new Error()
+    }
+    return ctx
+}
+```
+
+## 總結
+
+如下是這個文章所使用的所有代碼：
+
+```tsx
+import { act, createContext, useContext, useReducer, type ActionDispatch, type Context, type Reducer } from "react"
+
+type Theme = {
+    isDark: boolean
+    sourceColor: string
+    contrast: number
+}
+type ThemeAction =
+    { type: 'set-is-dark', payload: boolean } |
+    { type: 'set-source-color', payload: string } |
+    { type: 'set-contrast', payload: number }
+
+
+const themeContext = createContext<[Theme,ActionDispatch<[action: ThemeAction]>]>(null)
+
+const ThemeProvider = ({ children }) => {
+    const defaultValue: Theme = {
+        contrast: 0,
+        isDark: false,
+        sourceColor: 'red'
+    }
+    const reducer: Reducer<Theme, ThemeAction> = (state, action) => {
+        switch(action.type) {
+            case 'set-contrast': return ({ ...state, contrast: action.payload })
+            case 'set-is-dark': return ({ ...state, isDark: action.payload })
+            case 'set-source-color': return ({ ...state, sourceColor: action.payload })
+            default: throw new Error('Non-Supported Action.')
+        }
+    }
+    const [value, dispatch] = useReducer(reducer, defaultValue)
+    return <themeContext.Provider value={[value, dispatch]}>{children}</themeContext.Provider>
+}
+const useTheme = () => {
+    const ctx = useContext(themeContext)
+    if(!ctx) {
+        throw new Error()
+    }
+    return ctx
+}
+
+const ShowConfig = (props: { themeDate: [Theme, ActionDispatch<[action: ThemeAction]>] }) => {
+    const [{ contrast, isDark, sourceColor }, _] = props.themeDate
+    return (
+        <div>
+            <p>Contrast: {contrast}</p>
+            <p>SourceColor: {sourceColor}</p>
+            <p>IsDark: {String(isDark)}</p>
+        </div>
+    )
+}
+
+const AddContrastButton = (props: { themeDate: [Theme, ActionDispatch<[action: ThemeAction]>]}) => {
+    const [{ contrast }, dispatch] = props.themeDate
+    return (
+        <button onClick={() => dispatch({type: 'set-contrast', payload: contrast + 1})}>Add Contrast</button>
+    )
+}
+
+const AppThemed = () => {
+    const [value, dispatch] = useTheme()
+    return (
+        <>
+            <ShowConfig themeDate={[value, dispatch]}></ShowConfig>
+            <AddContrastButton themeDate={[value, dispatch]}></AddContrastButton>
+        </>
+    )
+}
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <AppThemed></AppThemed>
+        </ThemeProvider>
+    )
+}
+```

@@ -1,0 +1,50 @@
+---
+import DS from '@material-design-icons/svg/round/dark_mode.svg?raw'
+import LS from '@material-design-icons/svg/round/light_mode.svg?raw'
+---
+
+<mdc-icon-button id="switch-theme-icon-button" aria-label="A button to switch between dark and light themes.">
+    <mdc-icon hidden class="light" set:html={DS}></mdc-icon>
+    <mdc-icon hidden class="dark" set:html={LS}></mdc-icon>
+</mdc-icon-button>
+
+<script type="module" is:inline>
+    import { ContextSymbol } from '@sandlada/document-context'
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const button = document.querySelector(`#switch-theme-icon-button`)
+        const l = button?.querySelector(`.light`)
+        const d = button?.querySelector(`.dark`)
+
+        if(!button || !l || !d) {
+            return
+        }
+
+        const updateButtonUI = (isDark) => {
+            if(isDark) {
+                l.setAttribute('hidden', '')
+                d.removeAttribute('hidden')
+            } else {
+                l.removeAttribute('hidden')
+                d.setAttribute('hidden', '')
+            }
+        }
+
+        button.addEventListener('click', () => {
+            if(document[ContextSymbol].themeConfig.isDark) {
+                document.dispatchEvent(new Event('theme:change-to-light'))
+                document.dispatchEvent(new Event('attr:change-to-light'))
+            } else {
+                document.dispatchEvent(new Event('theme:change-to-dark'))
+                document.dispatchEvent(new Event('attr:change-to-dark'))
+            }
+
+            document.dispatchEvent(new Event('theme:save-changes'))
+            updateButtonUI(document[ContextSymbol].themeConfig.isDark)
+        })
+
+        // Init
+        updateButtonUI(document[ContextSymbol].themeConfig.isDark)
+    })
+</script>

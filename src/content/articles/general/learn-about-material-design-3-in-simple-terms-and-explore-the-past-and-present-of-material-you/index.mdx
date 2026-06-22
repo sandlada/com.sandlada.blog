@@ -1,0 +1,264 @@
+---
+id: "R8zTHiE0aKeJjxAOmhKrf"
+category: "general"
+order: 1
+
+meta:
+    title: "深入淺出 Material Design 3，探索 Material You 的前世今生"
+    description: "從Material Design的演變歷程，深入探討Material Design 3的設計理念、核心元件以及 Material You的個性化特性，並結合程式碼範例說明如何在前端開發中應用。"
+    author: "kai-orion"
+    keywords: ["Material Design", "Material You", "設計", "前端", "Android", "用戶體驗"]
+    publishedAt: 2024-03-02
+    createdAt: 2024-03-02
+    updatedAt: 2024-03-02
+    language: "zh_Hant"
+
+hasOverview: true
+overview: "这篇文章深入浅出地介绍了Material Design 3及其前身Material Design的发展历程和核心概念。文章首先回顾了Material Design的演变，从最初的Quantum Paper概念到Material Design 1、2、3的迭代，重点介绍了Material Design 3和Material You的动态配色特性。接着，文章概述了Material Design的构成，包括Motion、Icons、Typography、Layout和Components等关键要素，并以图文并茂的形式详细解释了Motion、Icons和Typography的设计原则和规范。最后，文章还提到了Material Design中的优秀设计实践，如通过稀松布形式应用文字保护以提高可读性。总而言之，本文全面梳理了Material Design的设计理念和技术要点，为前端开发者提供了宝贵的参考和指导。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: false
+cover:
+    image: ./learn-about-material-design-3-in-simple-terms-and-explore-the-past-and-present-of-material-you.png
+    alt: ''
+---
+
+# 深入淺出 Material Design 3，探索 Material You 的前世今生
+
+**文檔正被編寫中，此文檔為預覽狀態。**
+
+Material Design，簡稱 MD， 內部代號 Quantum Paper (量子紙張)， 是 Google 開發的全平台的設計語言，它通過**規範視覺、運動、交互**，並**提供一流的應用程式包(庫)**供第三方開發者使用，最終讓所有平台的**體驗保持一致**。 Material Design 以優秀的一致性的體驗而聞名於 Android 應用程式開發。如今，Material Design 正被越來越多的開發者使用。
+
+這篇文章將重點討論有關 Material Design 的如下幾點:
+
+- Material Design 的發展歷程
+- Material Design 的構成
+  - Design Tokens
+  - Color System
+
+## Material Design 的發展歷程
+
+| 版本                                        |        發布時間 |
+| :------------------------------------------ | --------------: |
+| [Material Design 1](https://m1.material.io) | Google I/O 2014 |
+| [Material Design 2](https://m2.material.io) | Google I/O 2018 |
+| [Material Design 3](https://m3.material.io) | Google I/O 2021 |
+
+### Material Design 的前夕: Quantum Paper 的哲學
+
+| 相關鏈接                                                                                                                                                |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [關於 Quantum Paper 的報導](https://www.androidpolice.com/2014/06/11/exclusive-quantum-paper-and-googles-upcoming-effort-to-make-consistent-ui-simple/) |
+
+Google 公司以 Google Search 起家，主要業務圍繞 Google Search， Gmail， Youtube， Google+ 等產品展開，**這些業務伴隨著巨大的維護成本: 同屬於 Google 的應用程式有著不統一的設計理念和風格，不同團隊的設計部分無法順利的交換信息，用戶使用 Google 產品時因不同的行為邏輯而感受到較大的割裂感。** 在當時，很難想像 Gmail 和 Google+ 同屬於 Google 公司的羼品。
+
+Google 為了解決這些問題，名為 Quantum Paper 的解決方案誕生。
+
+Quantum Paper 是 Google 早期的一個不完整的設計系統的初形，它使用嚴格的網格系統、卡片設計和恰到好處的極簡主義，在電子的虛擬和現實的物理之間找到了平衡:
+
+- 事物的運動方式符合人們的預期
+- 使用陰影表達層次
+- 使用卡片進行有限的自由創作
+
+> Designer Matías Duarte: "unlike real paper, our digital material can expand and reform intelligently. Material has physical surfaces and edges. Seams and shadows provide meaning about what you can touch."
+
+_Quantum Paper 沒有被 Google 官方承認，它表達了與 Material Design 近似的理念。_
+
+### Material Design 1: Material 時代
+
+| 相關鏈接                                             |
+| :--------------------------------------------------- |
+| [Material Design 1 官方網站](https://m1.material.io) |
+
+Material Design 的初始版本在 2014 年 6 月 25 日的 Google I/O 上公開。這標誌著 Material Design 正式被投入到 Google 的一系列產品當中，它解決了 Quantum Paper 誕生時 Google 面臨的問題:
+
+- 解決了不統一的設計風格和設計理念
+- 降低了不同團隊間共享技術和信息的成本
+- 為用戶提供了低學習成本的用戶界面
+
+此時的 Material Design 並不完善，關於它供第三方開發者使用的應用程式包處於呱呱墜地的狀態。
+
+### Material Design 2: 在 Material 的方向退一步
+
+| 相關鏈接                                             |
+| :--------------------------------------------------- |
+| [Material Design 2 官方網站](https://m2.material.io) |
+
+_筆者認為 Material Design 2 是 Material Design 1 的補充與拓展，第一代對外部提供的工具(應用程式包，開發工具)、文檔相當不完善，第二代提供更面的應用程式包和周邊工具彌補了第一代的缺陷。_
+
+Material Design 2 在 2018 年 5 月的 Google I/O 上公開。相比於前一代，Material Design 2 在顏色、布局、動畫方面做出了讓步，例如**更加柔和**的顏色，更加不具有侵略性的邊角。Material Design 2 **鼓勵使用屬於自己的品牌**，例如配色方案、字體。為了更順利的創建自己的品牌，Material Design 2 引入 Material Theming，通過 Material Theming 以創建精細控制的組件樣式。
+
+Material Design 2 對第一代做出的改進:
+
+- 弱化了对比度以使顏色不再過於鮮豔，鼓勵使用更加廣泛的、柔和的色彩和漸變
+- 不再默認使用銳利的直角，而是使用較為柔和的圓角
+- Material Theming
+- 可訪問性
+- 完善的供第三方開發者使用的應用程式包
+
+<img
+  src="https://media-r2.glare-labs.uk/md-2-button-theming.gif"
+  alt="Material Design 2 Theming的演示圖片"
+/>
+
+### Material Design 3: Material You
+
+| 相關鏈接                                             |
+| :--------------------------------------------------- |
+| [Material Design 3 官方網站](https://m3.material.io) |
+
+**Material Design 3** 在 2021 年 5 月的 Google I/O 上公開。Material Design 3 是 Google 迄今為止**最新的開源設計系統**，也是 Material Design 系列中**變化最大的、改進最大**的設計系統。
+
+Material Design 3 的新事物:
+
+- 利用 material-color-utilities 的基於 HCT 或圖片的動態配色
+- 重新設計的組件、布局、顏色、動畫
+
+伴隨 Material Design 3 發布的還有 Android 12 和搭載在 Android 12 上的 Material You。Material You 以優秀的動態配色獲得了不錯的評價。
+
+## Material Design 的實現
+
+| 實現的鏈接                                                                        |    平台 | MD 版本 | 是某存檔 | 是否官方 |
+| :-------------------------------------------------------------------------------- | ------: | ------: | -------: | -------: |
+| [MDC Android](https://github.com/material-components/material-components-android) | Android |       3 |       No |      Yes |
+| [MDC IOS](https://github.com/material-components/material-components-ios)         |     IOS |       2 |      Yes |      Yes |
+| [MDC Flutter](https://github.com/material-components/material-components-flutter) | Flutter |       2 |      Yes |      Yes |
+| [Material Web Components](https://github.com/material-components/material-web)    |     Web |       3 |       No |      Yes |
+| Jetpack Compose                                                                   | Android |       3 |       No |      Yes |
+| [Material UI](https://github.com/mui/material-ui)                                 |   React |       2 |       No |       No |
+| ...                                                                               |     ... |     ... |      ... |      ... |
+
+## Material Design 的組成
+
+Material Design 可以劃分為:
+
+| 組成           | 介紹 | 是否重要 |
+| :------------- | :--- | -------: |
+| Accessibility  |      |       No |
+| Content Design |      |       No |
+| Design Tokens  |      |      Yes |
+| Interaction    |      |       No |
+| Layout         |      |      Yes |
+| Color          |      |      Yes |
+| Elevation      |      |      Yes |
+| Icons          |      |      Yes |
+| Motion         |      |      Yes |
+| Shape          |      |      Yes |
+| Typography     |      |      Yes |
+| Components     |      |      Yes |
+
+本文章僅說明 Design Tokens，Color，Elevation，Icons，Motion，Shape，Typography。
+
+### Motion
+
+| 相關鏈接                                                                 |
+| :----------------------------------------------------------------------- |
+| [MD1 的 Motion 頁面](https://m1.material.io/motion/material-motion.html) |
+| [MD3 的 Motion 頁面](https://m3.material.io/styles/motion/overview)      |
+
+Motion (運動) ，它規範了應用程式的各種動畫 (動畫時間、動畫曲線、運動方向、變形)，它強調動畫需要符合現實世界的運動規律，它展示了應用程式的組織方式及其功能:
+
+- 視圖之間的焦點轉換
+- 適當地響應用戶意圖
+- 元素之間的層次與空間關係
+
+<video autoplay loop alt="Motion向用戶表達操作是否可用">
+  <source
+    src="https://media-r2.glare-labs.uk/material-design-1-motion-signal.webm"
+    type="video/webm"
+  />
+</video>
+
+<video autoplay loop alt="">
+  <source
+    src="https://media-r2.glare-labs.uk/md-3-duration-do-2.mp4"
+    type="video/mp4"
+  />
+</video>
+
+### Icons
+
+Material Design 指出，圖標應該以最少的理解成本表達出開發者的意圖。最新的 Google 圖標可以在[Google Fonts - Icons 頁面](https://fonts.google.com/icons)中查詢。
+
+Icons 的實現眾多，筆者關注的實現以 npm 為主，以 Google 的 [Github 倉庫](https://github.com/google/material-design-icons)為例子，它推薦的 npm 有:
+
+- [Material Symbols](https://github.com/marella/material-symbols/tree/main/material-symbols#readme)
+- [Material Icons](https://github.com/marella/material-icons#readme)
+- [@material-design-icons/font](https://github.com/marella/material-design-icons/tree/main/font#readme)
+- [@material-design-icons/svg](https://github.com/marella/material-design-icons/tree/main/svg#readme)
+
+### Typography
+
+_Material Design 自始自終推薦使用 Roboto 或 Noto 字體。_
+
+Material Design 設計了如下字體比例以應對大多數場景:
+
+|          |         Small |         Medium |         Large |
+| :------- | ------------: | -------------: | ------------: |
+| Display  |  DisplaySmall |  DisplayMedium |  DisplayLarge |
+| Headline | HeadlineSmall | HeadlineMedium | HeadlineLarge |
+| Title    |    TitleSmall |    TitleMedium |    TitleLarge |
+| Body     |     BodySmall |     BodyMedium |     BodyLarge |
+| Label    |    LabelSmall |    LabelMedium |    LabelLarge |
+
+以上表格 15 項都被稱為 typescale。
+
+![Typescale的圖示](https://lh3.googleusercontent.com/1nAIPtxZxMZZwPl6lREc1UDgLmuz2yiBm3KMwfA6uYUz18IFSIIs_HITzK4JziRfjFDgAqQ2w4i4mDcpTSIGvMNYNcIYfZONqGy2lSbe5vQW=s0)
+
+### Layout
+
+### Components
+
+在經歷了一段時間的改進後，Material Design 1 最終的組件有如下這些:
+
+- Bottom navigation
+- Bottom sheets
+- Buttons
+- Buttons: Floating Action Button
+- Cards
+- Chips
+- Data tables
+- Dialogs
+- Dividers
+- Expansion panels
+- Grid lists
+- Lists
+- Lists: Controls
+- Menus
+- Pickers
+- Progress & activity
+- Selection controls
+- Sliders
+- Snackbars & toasts
+- Steppers
+- Subheaders
+- Tabs
+- Text fields
+- Toolbars
+- Tooltips
+- Widgets
+
+## MD 中的優秀設計
+
+### 文字保護
+
+為了使圖像頂部的版式清晰易讀，請以稀鬆布形式應用文字保護。稀鬆布是輕質、半透明的材料層。
+
+<img
+  src="https://media-r2.glare-labs.uk/style-imagery-integration-text.png"
+  alt="稀鬆布梯度下降的圖示"
+/>
+
+1. 漸層的暗端：不透明度值取決於上下文
+2. 漸層中心點：距離較暗端更近 3/10
+3. 漸變終點：不透明度為 0
+
+為了避免條帶（形成不同的條紋形狀），漸變應該很長，為標準應用欄高度的 3 倍，中心點大約 3/10 朝向漸變的較暗一側。這使漸變具有自然的衰減並避免尖銳的邊緣。
+
+應根據其環境選擇漸變的不透明度。某些影像可以使用較暗的漸變，例如此處顯示的影像具有 60% 的漸變。
+
+在某些情況下，梯度可能低至 10-20%。

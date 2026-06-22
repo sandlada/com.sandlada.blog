@@ -1,0 +1,50 @@
+---
+
+---
+
+<main class="article-page-container">
+    <slot></slot>
+</main>
+
+<style>
+    
+    .article-page-container {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        display: flow-root;
+        position: relative;
+
+        transition-property: padding;
+        transition-duration: 50ms;
+
+        padding-top: 12px;
+        padding-left: 12px;
+        padding-right: 12px;
+        @media (min-width: 600px) {
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+        @media (min-width: 720px) {
+            padding-left: 72px;
+            padding-right: 72px;
+        }
+        @media (min-width: 840px) {
+            padding-left: 96px;
+            padding-right: 96px;
+        }
+
+        @media (min-width: 1200px) {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 96px;
+            padding-right: 96px;
+        }
+        @media (min-width: 1392px) {
+            max-width: 1200px;
+            padding-left: 0px;
+            padding-right: 0px;
+        }
+    }
+</style>

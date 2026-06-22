@@ -1,0 +1,387 @@
+---
+id: "nEY3yeeXWvTN2Qb5SFTN0"
+category: "proxy"
+order: 1
+
+meta:
+    title: Clash Verge Rev 配置指南
+    description: "本文提供一套專為高強度網絡審查環境設計的 Clash Verge Rev 配置策略。透過禁用 IPv6、強制海外加密 DNS、啟用 TUN 模式以及流量指紋偽裝等技術手段，協助使用者在確保個人隱私不被監控的前提下，實現穩定且安全的跨境網絡訪問。"
+    author: kai-orion
+    keywords: ["Clash", "Clasg Verge", "Clash Verge Rev", "Config", "Clash Config", "Network Secerity"]
+    createdAt: 2026-02-22
+    publishedAt: 2026-02-22
+    updatedAt: 2026-02-22
+    language: "zh_Hant"
+
+hasOverview: true
+overview:  "這份配置指南旨在為身處嚴苛網絡審查地區（如中國、伊朗、俄羅斯）的使用者，提供一套最高安全等級的 Clash Verge Rev 操作方案。核心防禦邏輯建立在全面封禁 IPv6 以及棄用境內 DNS 服務器的基礎上，以防止任何形式的 IP 洩漏與 DNS 污染。技術上，該配置深度運用了 Fake-IP 模式與 TUN 混合棧技術，強制接管系統所有流量並透過 DoH 或 DoT 等加密協議進行遠端解析，確保 ISP 無法追蹤用戶的域名訪問記錄。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: true
+cover:
+    image: ./dbf37a26-3165-494c-aede-c4fbb48e97cc.jpg
+    alt: "Clash Verge Rev 配置指南封面，左側為粉紫色漸層圓形圖標，內含白色貓臉造型 Logo，右側以白色粗體顯示英文標題「Clash Verge Rev」及中文「配置指南」，背景為紫色科技網路圖案與各式裝置圖示。"
+---
+# Clash Verge Rev 配置指南
+
+> 我使用的配置，記錄下來供大家使用。
+
+## 先決條件
+
+- 運行[Clash Verge](https://github.com/clash-verge-rev/clash-verge-rev)
+- 啓用**System Proxy** & **TUN Mode**
+- 開啓**DNS Overwrite**
+- `IPv4` Over `IPv6`
+
+## 前置説明
+
+**這一部分的内容非常重要。**
+
+### 關於境内 DNS 服務商
+
+在伊朗、俄羅斯、中國，由於網絡封鎖與高强度政府審查，使用**境内DNS服務商不安全**，因爲境内DNS服務商會嚴格配合政府的審查工作，你的一舉一動在境内DNS服務商面前是透明且被記錄的。
+
+請**不要使用**下列任何DNS，無論是阿里、騰訊還是百度，也無論它們DOH、DOT支持與否（僅列出了境内常出現的DNS）：
+
+```plaintext
+223.5.5.5
+223.6.6.6
+119.29.29.29
+182.254.116.116
+180.76.76.76
+114.114.114.114
+114.114.115.115
+210.2.4.8
+```
+
+### 關於 IPv6
+
+由於Windows系統内部使用IPv6通信，在系統層面禁用IPv6會導致系統組件不可預知地運行異常（可能）。（Windows也不提供禁用IPv6的手段，但我們可以優先IPv4。）
+
+不優先IPv6的情況下，`localhost`會被優先解析到`::1`而非`127.0.0.1`。即使為Ipv6編寫規則也不行，因爲IPv6 經常會繞過你的所有規則，直接向運營商發起解析，是安全防護的最大破綻。
+
+若可以查看[這個頁面 - StackExchange - "Why is there a difference between ping "localhost" and ping "local IP address"?"](https://superuser.com/a/414066/2843828)，按照Tamara Wijsman（已標記為“已解決”）用戶的回答完成如下步驟以系統層面IPv4優先：
+
+1. 打開注冊表（regedit），Win+R，輸入`regedit`並運行
+2. 轉到`HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters`
+3. 創建（若不存在）`DisabledComponents`，類型為`DWORD (32-bit)`
+4. 鍵入`0x20`
+
+完成如上步驟后我們可以放心關閉IPv6。
+
+### 關於 QUIC，WebRTC 和瀏覽器中的 Secure DNS
+
+#### QUIC
+
+QUIC基於UDP協議且內建加密與多路復用機制。
+
+在TUN模式下，Clash主要依賴Fake-IP + DNS劫持來攔截並代理流量，但QUIC的連接建立與加密過程使得Clash很難準確識別目標域名。UDP流量經常被標記為"Tun(udp)"類型，但規則匹配失敗，最終走DIRECT（直連），造成YouTube、Google等依賴HTTP/3的服務繞過代理。
+
+如果你正在使用Chrome，可前往[`chrome://flags/#enable-quic`](chrome://flags/#enable-quic)關閉QUIC。
+
+#### WebRTC
+
+WebRTC主要用於瀏覽器實時音視頻通信（例如Google Meet、Discord語音、WebRTC-based視頻網站），它會通過UDP（STUN/TURN伺服器）獲取並交換本地真實公網IP與端口。
+在TUN模式下，即使啟用Fake-IP，WebRTC的ICE候選收集階段仍可能：
+
+- 直接發送UDP封包到外部STUN伺服器，暴露真實IP。
+- 繞過Clash的TUN虛擬網卡或規則引擎。
+
+如果你的瀏覽器支持使用插件，請安裝`WebRTC Leak Prevent`或其它等價的插件。
+
+#### 瀏覽器中的 Secure DNS
+
+Secure DNS讓瀏覽器（Chrome/Edge/Firefox等）使用加密的DoH伺服器進行域名解析，完全獨立於系統DNS設定。
+
+若瀏覽器啟用DoH，則會直接向外部DoH伺服器發起HTTPS請求（通常走443 TCP），此請求本身不經過Clash內建DNS解析器，可能導致：
+
+- 真實域名解析結果洩漏。
+- 後續連接使用真實IP而非Fake-IP，無法進入代理規則鏈。
+
+請前網你的瀏覽器設置中關閉`Secure DNS`。
+
+### 檢測不出 DOH 與 DOT
+
+Clash内置DNS解析器。
+在 Fake-IP 模式下，Clash 會立即返回一個虛假的 IP（如 198.18.0.x）給應用程序，同時在後台異步進行真正的解析。這極大地提高了響應速度，並防止了本地 DNS 污染。
+
+當你開啟 TUN 模式和 Fake-IP 時，你的瀏覽器發起的 DNS 請求被 Clash 攔截並返回了一個虛假 IP。瀏覽器根本沒有與真實的 DNS 服務器發生直接交互，所有的加密查詢都在 Clash 內部完成。檢測網站只能看到代理服務器端發出的 DNS 查詢，而無法檢測到你本地到 Clash 之間，以及 Clash 到 DNS 服務器之間是否使用了 DoH。
+
+### 加密連接導致網絡中斷
+
+_這個部分排除配置錯誤等其它因素。_
+
+通常發生在視頻通話、全球實時多人游戲的情況下，這是因爲GFW主動切斷了你的網絡。
+
+即使使用DoH/DoT加密通道，GFW已部署高級流量分析與主動探測，可識別並阻斷加密DNS流量，導致鏈接不穩定或完全中斷。
+
+## 配置 DNS Overwrite
+
+```yaml
+dns:
+  enable: true
+  listen: '0.0.0.0:1053'
+  enhanced-mode: 'fake-ip'
+  fake-ip-range: '198.18.0.1/16'
+  fake-ip-filter-mode: 'blacklist'
+  prefer-h3: true
+  respect-rules: true
+  use-hosts: true
+  use-system-hosts: true
+  ipv6: false
+  fake-ip-filter:
+    - '+.lan'
+    - '+.local'
+    - '+.arpa'
+    - '+.test'
+    - '+.localhost'
+    - 'localhost.[^.]+'
+    - 'local'
+    - '127.*'
+    - '0.0.0.0'
+    - '::1'
+    - '*.ntp.org'
+    - '+.ntp.org'
+    - 'ntp.*.com'
+    - 'pool.ntp.org'
+    - 'time.windows.com'
+    - 'time.*.apple.com'
+    - 'time.*.com'
+    - 'lens.l.google.com'
+    - '*.localdomain'
+    - 'mDNS.*.local'
+    - '*.multicast'
+    - '224.0.0.251'
+    - '+.stun.*'
+    - '+.stun.*.*'
+    - '+.stun.*.*.*'
+    - 'localhost.ptlogin2.qq.com'
+    - 'localhost.sec.qq.com'
+    - 'localhost.work.weixin.qq.com'
+    - '+.miwifi.com'
+    - 'connectivitycheck.gstatic.com'
+    - 'captive.apple.com'
+    - 'detectportal.firefox.com'
+    - 'www.msftconnecttest.com'
+    - '*.msftncsi.com'
+    - '*.msftconnecttest.com'
+    - 'ipv6.msftconnecttest.com'
+  default-nameserver:
+    - 'tcp://208.67.222.222:443'
+    - 'https://162.159.36.1/dns-query'
+    - 'https://149.112.112.112/dns-query'
+    - 'tls://1.1.1.1:853'
+  nameserver:
+    - 'https://1.1.1.1/dns-query'
+    - 'https://8.8.8.8/dns-query'
+    - 'https://9.9.9.9/dns-query'
+    - 'https://149.112.112.112/dns-query'
+    - 'https://194.242.2.2/dns-query'
+    - 'https://76.76.2.0/dns-query'
+    - 'https://45.90.28.0/dns-query'
+  direct-nameserver-follow-policy: true
+  fallback-filter:
+    geoip: true
+    geoip-code: 'CN'
+    ipcidr:
+      - '240.0.0.0/4'
+      - '0.0.0.0/32'
+    domain:
+      - '+.google.com'
+      - '+.facebook.com'
+      - '+.youtube.com'
+  fallback: []
+  proxy-server-nameserver:
+    - 'tls://8.8.4.4:853'
+    - 'tls://1.1.1.1:853'
+    - 'tls://9.9.9.9:853'
+    - 'https://162.159.36.1/dns-query'
+    - 'https://149.112.112.112/dns-query'
+  direct-nameserver: []
+  nameserver-policy:
+    geosite:cn:
+      - 'https://1.1.1.1/dns-query'
+      - 'https://9.9.9.9/dns-query'
+      - 'https://45.90.28.0/dns-query'
+      - 'https://162.159.36.1/dns-query'
+      - 'https://149.112.112.112/dns-query'
+
+```
+
+## 配置 Global Extend Config
+
+_`Global Extend Config`位於`Profiles`中。_
+
+`Global Extend Config`包含了`DNS Overwrite`的所有dns設置。
+
+```yaml
+ipv6: false                       # 【重要】在大多數封鎖環境中，IPv6 的路由不透明且難以被代理完全接管，容易導致真實 IP 繞過代理直接連接目標（即 IPv6 洩漏）。
+find-process-mode: strict         # 【重要】嚴格進程匹配模式。確保 Clash 能精確識別是哪個 Windows/macOS 軟件發起的請求，從而準確應用分流規則。
+global-client-fingerprint: chrome # 【重要】核心功能。將所有代理連接的 TLS 握手特徵偽裝成 Chrome 瀏覽器。這是為了對抗防火牆的「主動探測」和「流量指紋識別」，降低代理節點被精確封鎖的風險。
+
+sniffer:
+  enable: true                    # 【重要】開啟嗅探。
+  force-dns-mapping: true         # 【重要】強制將 IP 地址映射回域名。對於某些寫死 IP 或使用 Fake-IP 的流量，能通過嗅探 SNI 重新找回域名，確保分流規則生效。
+  parse-pure-ip: true             # 解析純 IP 請求。
+  sniff:
+    http:
+      ports: [80, 8080-8880]      # 嗅探 HTTP 流量。
+      override-destination: true  # 根據嗅探到的 Host 覆蓋目標地址。
+    tls:
+      ports: [443, 8443]          # 嗅探 HTTPS 流量（TLS 握手階段的 SNI）。
+      override-destination: true  # 根據嗅探到的 Host 覆蓋目標地址。
+    quic:
+      ports: [443, 8443]          # 嗅探 QUIC 流量（如 YouTube 使用的協議）。
+      override-destination: true  # 根據嗅探到的 Host 覆蓋目標地址。
+
+tun:
+  enable: true                    # 【重要】啟用虛擬網卡模式。
+  stack: gvisor                   # 【重要】推薦 gvisor，安全性更高，隔離性更好
+  dns-hijack:                     # 【重要】DNS 劫持。
+    - any:53                      # 強行攔截所有發往 53 端口的 DNS 請求，並重定向到 Clash 內置 DNS。
+    - tcp://any:53                # 防止軟件通過 TCP 協議查詢 DNS。
+  auto-route: true                # 自動設置路由表，確保所有流量都流向 TUN 網卡。
+  auto-detect-interface: true     # 自動檢測物理網卡，防止網絡切換時代理失效。
+  bypass-domain:                  # 【重要】排除以下域名，不走 TUN 網卡
+    - 'localhost'
+    - '+.localhost'
+    - '+.local'
+    - '+.lan'
+  bypass-ip:                      # 【重要】排除以下 IP 段（本地與局域網），確保直連。只放局域網 (LAN) 私有 IP。
+    - '127.0.0.0/8'               # 本地回環
+    - '10.0.0.0/8'                # 私有 A 類地址 (大型局域網)
+    - '100.64.0.0/10'             # 運營商級別 NAT (CGNAT)，部分寬帶或虛擬網卡使用
+    - '169.254.0.0/16'            # Link-Local 地址，當 DHCP 獲取失敗時自動分配的地址
+    - '172.16.0.0/12'             # 私有 B 類地址 (中型局域網)
+    - '192.168.0.0/16'            # 私有 C 類地址 (家庭路由器常用)
+    - '224.0.0.0/4'               # 多播/組播地址 (用於設備發現)
+    - '255.255.255.255/32'        # 受限廣播地址
+
+hosts:
+    'localhost': 127.0.0.1
+    '*.local': 127.0.0.1
+
+skip-proxy:                       # 全局跳過代理列表
+  - '127.0.0.1'
+  - 'localhost'
+  - '::1'
+  - '0.0.0.0/8'
+  - '10.0.0.0/8'
+  - '100.64.0.0/10'
+  - '127.0.0.0/8'
+  - '169.254.0.0/16'
+  - '172.16.0.0/12'
+  - '192.168.0.0/16'
+  - 'fe80::/10'
+  - 'fc00::/7'
+  - '<local>'                      # 必須保留：Windows/macOS 用於識別本地主機名
+
+dns:
+  enable: true                     # 【重要】啟用 Clash DNS 服務器，接管系統所有的 DNS 請求。
+  listen: '0.0.0.0:1053'           # 【重要】在本地 1053 端口監聽 DNS 請求。不使用默認的 53 端口可以避免與系統自帶的 DNS 服務發生衝突。
+  ipv6: false                      # 【重要】在嚴苛審查環境下，IPv6 的路由經常不受控制，極易導致真實 IP 洩露或繞過代理，關閉它是最安全的做法。
+  prefer-h3: true                  # 【可選-推薦】優先使用 HTTP/3 (QUIC) 進行 DoH 請求。在部分地區，QUIC 協議能繞過 TCP 阻斷，但如果當地運營商對 UDP 限速，可以改為 false。
+  respect-rules: true              # 【可選-推薦】DNS 請求不遵循路由規則。在 Fake-IP 模式下，設為 false 可以極大加快響應速度。
+  use-hosts: true                  # 【可選-推薦】使用配置文件中自定義的 hosts。
+  use-system-hosts: true           # 【可選-推薦】讀取系統自帶的 hosts 文件。
+  enhanced-mode: 'fake-ip'         # 【重要】開啟 Fake-IP 模式。當設備請求域名時，Clash 直接返回一個虛假的內網 IP，同時將真實域名的解析任務交給遠端代理服務器去完成。這意味著你的本地網絡（ISP）根本不知道你要訪問什麼網站，徹底杜絕本地 DNS 洩露。
+  fake-ip-range: '198.18.0.1/16'   # 【重要】定義虛假 IP 的分配範圍，這是 RFC6890 規定的保留網段，不會與你的家用路由器網段衝突。
+  fake-ip-filter-mode: 'blacklist' # 【重要】黑名單模式，名單內的域名不使用 Fake-IP，而是進行真實解析。
+  fake-ip-filter:
+    # 【重要】以下三個用於本地局域網設備發現（如打印機、NAS），避免代理。
+    - '+.lan'
+    - '+.local'
+    - '+.arpa'
+    - '+.test'
+    - '+.localhost'
+    - 'localhost.[^.]+'
+    - 'local'
+    - '127.*'
+    - '0.0.0.0'
+    - '::1'
+    # 【重要】時間同步服務。時間不同步會導致 TLS/SSL 握手失敗（代理連不上），必須直連。
+    - '*.ntp.org'
+    - '+.ntp.org'                              # NTP官方池
+    - 'ntp.*.com'
+    - 'pool.ntp.org'
+    - 'time.windows.com'                       # Windows默认时间服务器
+    - 'time.*.apple.com'                       # Apple时间同步
+    - 'time.*.com'                             # 时间同步
+    # 【重要】本地网络发现与多播（避免NAS、打印机、AirPlay、Chromecast等发现失败）
+    - 'lens.l.google.com'                      # Google Lens 特殊需求
+    - '*.localdomain'
+    - 'mDNS.*.local'                           # mDNS (Multicast DNS，多播DNS)
+    - '*.multicast'
+    - '224.0.0.251'                            # mDNS组播地址（部分配置需域名形式）
+    - '+.stun.*'                               # STUN (Session Traversal Utilities for NAT，会话穿越工具) 服务
+    - '+.stun.*.*'
+    - '+.stun.*.*.*'
+    # 【可選】常见国产设备/应用直连（防止登录、推送、局域网功能异常）(僅保留 local/localhost 類，防止洩露)
+    - 'localhost.ptlogin2.qq.com'
+    - 'localhost.sec.qq.com'
+    - 'localhost.work.weixin.qq.com'
+    - '+.miwifi.com'                           # 小米路由器管理
+    - 'connectivitycheck.gstatic.com'          # Android/Google连通性检测
+    - 'captive.apple.com'                      # Apple iOS/macOS 热点检测
+    - 'detectportal.firefox.com'               # Firefox 连通性检测
+    - 'www.msftconnecttest.com'
+    - '*.msftncsi.com'                         # Windows 的網絡連通性探測（Captive Portal）。確保 Windows 不會誤判「無網絡連接」。
+    - '*.msftconnecttest.com'                  # Windows完整域名通配（更安全）
+    - 'ipv6.msftconnecttest.com'               # IPv6版本检测
+
+  default-nameserver:                          # 引導DNS
+    - 'tcp://208.67.222.222:443'               # OpenDNS TCP 443 端口 (極高存活率保底)
+    - 'https://162.159.36.1/dns-query'         # Cloudflare 備用 IP
+    - 'https://149.112.112.112/dns-query'      # Quad9 備用 IP
+    - 'tls://1.1.1.1:853'                      # Cloudflare DoT
+    # 作用：僅用於解析下方 DoH/DoT 域名的真實 IP（例如把 1.1.1.1/dns-query 解析出來）。它們本身是明文的，但因為只解析可信的 DNS 服務器域名，無關用戶隱私，因此是安全的。
+
+  nameserver:                                  #【重要】你日常上網的所有域名解析都從這裡走。
+    - 'https://1.1.1.1/dns-query'              # Cloudflare
+    - 'https://8.8.8.8/dns-query'              # Google
+    - 'https://9.9.9.9/dns-query'              # Quad9
+    - 'https://149.112.112.112/dns-query'      # Quad9 備用
+    - 'https://194.242.2.2/dns-query'          # Mullvad
+    - 'https://76.76.2.0/dns-query'            # ControlD
+    - 'https://45.90.28.0/dns-query'           # NextDNS
+
+  proxy-server-nameserver:                     # 【代理節點專用 DNS】解析你的「機場節點」域名的 DNS。
+    - 'tls://8.8.4.4:853'                      # Google DoT (853端口在部分地區比443更少被干擾)
+    - 'tls://1.1.1.1:853'                      # Cloudflare DoT
+    - 'tls://9.9.9.9:853'                      # Quad9 DoT
+    - 'https://162.159.36.1/dns-query'         # Cloudflare 備用 IP DoH
+    - 'https://149.112.112.112/dns-query'      # Quad9 備用 IP DoH
+    # 【保底防死鎖】如果上面所有的加密 DNS 依然被你的運營商直連阻斷，請取消下面這行的註釋：
+    #- 'tcp://208.67.222.222:443'               # OpenDNS (不涉及隱私洩露，僅用於解析節點域名)
+    # 作用：你的代理節點往往也是域名的（如 us1.myproxy.com），這個選項確保解析代理節點本身時，也使用加密 DoH，防止防火牆通過嗅探 SNI 或 DNS 封鎖你的代理服務器。
+
+  nameserver-policy:                           # 【最激進的安全策略】
+    'geosite:cn':                              # 中國境內域名。
+      - 'https://1.1.1.1/dns-query'            # Cloudflare DoH (加密)
+      - 'https://9.9.9.9/dns-query'            # Quad9 DoH (加密)
+      - 'https://45.90.28.0/dns-query'         # NextDNS
+      - 'https://162.159.36.1/dns-query'       # Cloudflare 備用 IP DoH
+      - 'https://149.112.112.112/dns-query'    # Quad9 備用 IP DoH
+      # 【核心要點】：即使是訪問百度、淘寶，也不向中國 DNS 查詢。
+      # 雖然會增加一點點延遲（幾百毫秒），但你的 ISP 永遠無法通過 DNS 查詢記錄來分析你的上網畫像。這在極端環境下是最高級別的隱私保護。
+
+  direct-nameserver-follow-policy: true        # 直連域名跟隨路由規則策略。
+  direct-nameserver: []                        # 【可選-可自定義】直連專用 DNS（空）。因為你不在乎境內網站的加載延遲，全走海外 DNS 解析，這在安全上是滿分的做法。
+
+```
+
+## 最終階段
+
+使用如上配置并不是完全安全的，以軟件和個人配置的力量無法與政府國家機器的匹敵。
+
+### DNS 和 IP 泄露測試
+
+請使用如下工具檢測你的IP是否泄露，若如下測試結果中出現任何中國IP，你的網絡非常不安全。
+
+- [BrowserLeaks](https://browserleaks.com/dns)
+- [DNS Leak Test](https://www.dnsleaktest.com/)
+- [WebRTC Leak Test](https://browserleaks.com/webrtc)
