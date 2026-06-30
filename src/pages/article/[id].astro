@@ -9,12 +9,15 @@ import ArticleHeading from '../../modules/article-page/ArticleHeading.astro';
 import HeadingNavigator from '../../modules/article-page/HeadingNavigator.astro';
 import ArticleFontRadioGroup from '../../modules/article-page/ArticleFontRadioGroup.astro';
 import ArticleOutline from '../../modules/article-page/ArticleOutline.astro';
+import RelatedArticles from '../../modules/article-page/RelatedArticles.astro';
+import ReferencesSection from '../../modules/article-page/ReferencesSection.astro';
 import { render } from 'astro:content';
 import RootHTMLLayout from '../../layouts/RootHTMLLayout.astro';
 import PageHeader from '../../components/page-header/PageHeader.astro';
 import PageFooter from '../../components/page-footer/PageFooter.astro';
 import BlogIcon from "../../../public/blog-icon.svg"
 import WebsiteCover from "../../../public/website-cover.png"
+import { Article } from '../../modules/article/Article';
 
 interface Props extends CollectionEntry<'articles'> {}
 
@@ -38,8 +41,13 @@ const {
         hasCover,
         id,
         status: { isVisible, isDraft, isFeatured },
+        related,
+        references,
     },
 } = Astro.props;
+
+const relatedArticles = await Article.GetRelatedArticles(id);
+const resolvedReferences = await Article.GetReferencedReferences(references);
 
 const getLanguageString = (lang: string) => {
     switch (lang) {
@@ -124,6 +132,9 @@ const jsonLd = {
                 <ArticleOutline headings={headings} />
             </nav>
         </div>
+
+        <RelatedArticles relatedArticles={relatedArticles} />
+        <ReferencesSection references={resolvedReferences} />
 
         <PageFooter></PageFooter>
     </ArticlePage>

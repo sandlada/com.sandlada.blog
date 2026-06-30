@@ -49,7 +49,8 @@
         "preview": "astro preview",
         "bundle:vendor": "npm run bundle:dc && npm run bundle:mcu",
         "bundle:dc": "npx esbuild ./scripts/dc-entry.js --bundle --format=esm --minify --sourcemap --outfile=public/vendor/document-context.js",
-        "bundle:mcu": "npx esbuild ./scripts/mcu-entry.js --bundle --format=esm --minify --sourcemap --outfile=public/vendor/material-color-utilities.js"
+        "bundle:mcu": "npx esbuild ./scripts/mcu-entry.js --bundle --format=esm --minify --sourcemap --outfile=public/vendor/material-color-utilities.js",
+        "guid": "node -e \"import { nanoid } from 'nanoid'; console.log(nanoid())\""
     },
     "type": "module",
     "version": "0.0.1"

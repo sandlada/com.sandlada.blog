@@ -7,15 +7,19 @@ function GetCurrentDateString() {
 }
 
 const DefaultArticleSchemaString = `---
-category: "general"
-part: -1
+id: ""
+category: ["general"]
+order: 1
 
 meta:
     title: ""
     description: ""
     author: "kai-orion"
     keywords: []
-    publishTime: ${GetCurrentDateString()}
+    createdAt: ${GetCurrentDateString()}
+    publishedAt: ${GetCurrentDateString()}
+    updatedAt: ${GetCurrentDateString()}
+    language: "zh_Hant"
 
 hasOverview: false
 overview: ""
@@ -25,9 +29,13 @@ status:
     isVisible: true
     isFeatured: false
 
+hasCover: false
 cover:
     image: null
     alt: ""
+
+related: []
+references: []
 ---
 `
 

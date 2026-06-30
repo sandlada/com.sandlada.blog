@@ -1,0 +1,89 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+    relatedArticles: Array<CollectionEntry<'articles'>>
+}
+
+const { relatedArticles } = Astro.props;
+
+if (relatedArticles.length === 0) {
+    return;
+}
+---
+
+<section class="related-articles-section">
+    <h2 class="section-title title-large">Related Articles</h2>
+    <div class="related-list">
+        {
+            relatedArticles.map(article => (
+                <a class="related-card" href={`/article/${article.data.id}/`} tabindex="0">
+                    <h3 class="card-title title-small line-clamp-2">{ article.data.meta.title }</h3>
+                    <p class="card-description body-small line-clamp-2">{ article.data.meta.description }</p>
+                    <mdc-focus-ring></mdc-focus-ring>
+                </a>
+            ))
+        }
+    </div>
+</section>
+
+<style>
+    @reference "../../styles/global.css";
+
+    .related-articles-section {
+        margin-block: 48px 24px;
+    }
+
+    .section-title {
+        color: var(--md-sys-color-on-surface);
+        margin-block-end: 16px;
+    }
+
+    .related-list {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr;
+
+        @media (min-width: 600px) {
+            grid-template-columns: 1fr 1fr;
+        }
+        @media (min-width: 840px) {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+    }
+
+    .related-card {
+        position: relative;
+        display: block;
+        box-sizing: border-box;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--md-sys-color-surface-container-lowest);
+        text-decoration: none;
+        outline: none;
+
+        transition-property: background, border-radius;
+        transition-duration: 150ms;
+
+        &:hover,
+        &:focus-within {
+            border-radius: 24px;
+            background: var(--md-sys-color-secondary-container);
+        }
+
+        &:active {
+            border-radius: 12px;
+        }
+    }
+
+    .card-title {
+        margin: 0;
+        color: var(--md-sys-color-on-surface);
+        margin-block-end: 4px;
+    }
+
+    .card-description {
+        margin: 0;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+</style>

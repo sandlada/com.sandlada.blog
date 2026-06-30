@@ -24,7 +24,7 @@ const ArticleSchema = ({ image }: SchemaContext) => z.object({
      *
      * 真實的articles文件全部位於content/articles/...中
      */
-    category: z.string().readonly(),
+    category: z.array(z.string()).readonly(),
 
     /**
      * 用於排序，數字越小越靠前，默認為1
@@ -39,6 +39,19 @@ const ArticleSchema = ({ image }: SchemaContext) => z.object({
      * ```
      */
     order: z.number().default(1),
+
+    /**
+     * 站內相關文章 ID 列表，手動指定關聯
+     */
+    related: z.array(z.string()).default([]),
+
+    /**
+     * 引用清單，支援站內文章 (id) 與站外鏈接 (url)
+     */
+    references: z.array(z.object({
+        id: z.string().optional(),
+        url: z.string().url().optional(),
+    })).default([]),
 
     hasOverview: z.boolean().default(false),
     overview: z.string().nullable().default(null),
@@ -82,6 +95,10 @@ const ArticleSchema = ({ image }: SchemaContext) => z.object({
     .refine((data) => data.hasCover ? data.cover !== null && data.cover.image !== null : true, {
         message: "If hasCover is true, cover and cover.image must be provided",
         path: ['cover'],
+    })
+    .refine((data) => data.references.every(r => r.id || r.url), {
+        message: "Each reference must have at least id or url",
+        path: ['references'],
     })
 
 const ArticleCollection = defineCollection({

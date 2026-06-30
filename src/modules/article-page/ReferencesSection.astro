@@ -1,0 +1,98 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+    references: Array<{
+        id?: string;
+        url?: string;
+        article: CollectionEntry<'articles'> | null;
+    }>;
+}
+
+const { references } = Astro.props;
+
+if (references.length === 0) {
+    return;
+}
+---
+
+<section class="references-section">
+    <h2 class="section-title title-large">References</h2>
+    <ol class="references-list">
+        {
+            references.map(ref => {
+                // 站內引用：有 id 且解析到文章
+                if (ref.article) {
+                    return (
+                        <li>
+                            <a class="reference-link" href={`/article/${ref.article.data.id}/`} target="_self">
+                                { ref.article.data.meta.title }
+                            </a>
+                        </li>
+                    );
+                }
+                // 站外引用：有 url
+                if (ref.url) {
+                    return (
+                        <li>
+                            <a class="reference-link" href={ref.url} target="_blank" rel="noopener noreferrer">
+                                { ref.url }
+                            </a>
+                        </li>
+                    );
+                }
+                // 有 id 但未解析到文章（已刪除或不存在的文章）
+                if (ref.id) {
+                    return (
+                        <li>
+                            <span class="reference-unresolved">Unresolved reference: { ref.id }</span>
+                        </li>
+                    );
+                }
+                return null;
+            })
+        }
+    </ol>
+</section>
+
+<style>
+    @reference "../../styles/global.css";
+
+    .references-section {
+        margin-block: 48px 24px;
+    }
+
+    .section-title {
+        color: var(--md-sys-color-on-surface);
+        margin-block-end: 16px;
+    }
+
+    .references-list {
+        all: unset;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        li {
+            all: unset;
+            display: block;
+        }
+    }
+
+    .reference-link {
+        @apply body-medium lg:body-large;
+        color: var(--md-sys-color-primary);
+        text-underline-offset: 2px;
+        transition: text-underline-offset 150ms;
+
+        &:hover {
+            text-underline-offset: 4px;
+        }
+    }
+
+    .reference-unresolved {
+        @apply body-medium;
+        color: var(--md-sys-color-on-surface-variant);
+        font-style: italic;
+    }
+</style>
