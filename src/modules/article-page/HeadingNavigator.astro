@@ -1,0 +1,205 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+    headings: Array<MarkdownHeading>
+}
+
+const { headings } = Astro.props;
+---
+
+<div id="hn-sentinel" aria-hidden="true"></div>
+<nav class="heading-navigator" role="navigation">
+    <button id="mobile-breadcrumb-toggle" class="hn-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="hn-label">Navigate to heading...</span>
+        <svg class="hn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M7 10l5 5 5-5z"/>
+        </svg>
+    </button>
+    <md-menu anchor="mobile-breadcrumb-toggle" >
+        {
+            headings.map((heading) => (
+                <md-menu-item data-target={`#${heading.slug}`}>{' '.repeat(heading.depth) + heading.text}</md-menu-item>
+            ))
+        }
+    </md-menu>
+    <script is:inline>
+        (() => {
+            const trigger = document.getElementById('mobile-breadcrumb-toggle')
+            if (!trigger) return
+
+            const nav = trigger.closest('.heading-navigator')
+            if (!nav) return
+
+            const menu = nav.querySelector('md-menu')
+            if (!menu) return
+
+            const items = [...menu.querySelectorAll('md-menu-item')]
+            const labelEl = trigger.querySelector('.hn-label')
+
+            let currentActiveSlug = ''
+
+            const updateActive = () => {
+                const activeItem = items.find(item =>
+                    item.getAttribute('data-target') === `#${currentActiveSlug}`
+                )
+                labelEl.textContent = activeItem
+                    ? (activeItem.headline || activeItem.getAttribute('headline') || activeItem.textContent).trim()
+                    : 'Navigate to heading...'
+
+                items.forEach(item => {
+                    const target = item.getAttribute('data-target')
+                    item.selected = target === `#${currentActiveSlug}`
+                })
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation()
+                if (!menu.open) {
+                    const triggerRect = trigger.getBoundingClientRect()
+                    const spaceBelow = window.innerHeight - triggerRect.bottom
+                    if (spaceBelow < 300) {
+                        menu.setAttribute('anchor-corner', 'top-start')
+                        menu.setAttribute('menu-corner', 'bottom-start')
+                    } else {
+                        menu.removeAttribute('anchor-corner')
+                        menu.removeAttribute('menu-corner')
+                    }
+                }
+                menu.open = !menu.open
+                trigger.setAttribute('aria-expanded', menu.open)
+            })
+
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetAnchor = item.getAttribute('data-target')
+                    if (!targetAnchor) return
+                    const targetElement = document.querySelector(targetAnchor)
+                    if (!targetElement) return
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                        inline: 'nearest',
+                    })
+                    menu.open = false
+                    trigger.setAttribute('aria-expanded', 'false')
+                })
+            })
+
+            menu.addEventListener('close-menu', () => {
+                trigger.setAttribute('aria-expanded', 'false')
+            })
+
+            const slugs = items.map(item => item.getAttribute('data-target')).filter(Boolean)
+
+            const setupObserver = () => {
+                /** @type {HTMLElement[]} */
+                const headingElements = slugs
+                    .map(slug => document.querySelector(slug))
+                    .filter(el => el instanceof HTMLElement)
+
+                if (headingElements.length === 0) return
+
+                const visibleIds = new Set()
+                const observer = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting) {
+                            visibleIds.add(entry.target.id)
+                        } else {
+                            visibleIds.delete(entry.target.id)
+                        }
+                    }
+
+                    if (visibleIds.size > 0) {
+                        let topmost = null
+                        let topmostTop = Infinity
+                        for (const id of visibleIds) {
+                            const el = document.getElementById(id)
+                            if (el) {
+                                const rect = el.getBoundingClientRect()
+                                if (rect.top < topmostTop) {
+                                    topmostTop = rect.top
+                                    topmost = id
+                                }
+                            }
+                        }
+                        currentActiveSlug = topmost || currentActiveSlug
+                    }
+                    // else: 沒有標題在檢測區時，保留上一個已滾過的錨點
+                    updateActive()
+                }, {
+                    rootMargin: '-80px 0px -75% 0px',
+                    threshold: 0,
+                })
+
+                headingElements.forEach(el => observer.observe(el))
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupObserver)
+            } else {
+                setupObserver()
+            }
+
+            const sentinel = document.getElementById('hn-sentinel')
+            if (sentinel) {
+                const sentinelObserver = new IntersectionObserver(([entry]) => {
+                    nav.classList.toggle('hn-sticky', !entry.isIntersecting)
+                }, { threshold: 0 })
+                sentinelObserver.observe(sentinel)
+            }
+        })()
+    </script>
+</nav>
+
+<script>
+    import '@material/web/menu/menu.js'
+    import '@material/web/menu/menu-item.js'
+</script>
+
+<style>
+    .heading-navigator {
+        width: 100%;
+        display: inline-flex;
+        opacity: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        pointer-events: none;
+        --md-menu-container-shape: 24px;
+
+        transform: translateY(-8px) scaleX(0.95) scaleY(0.9);
+
+        transition-property: transform, opacity;
+        transition-duration: 200ms, 100ms;
+    }
+
+    .heading-navigator.hn-sticky {
+        transform: translateY(0px) scaleX(1) scaleY(1);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    button.hn-trigger {
+        all: unset;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding-inline: 12px;
+        height: 40px;
+        outline: none;
+        border-width: 0px 0px 1px 0px;
+        border-style: solid;
+        border-color: var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface-bright);
+        color: var(--md-sys-color-on-surface-variant);
+        cursor: pointer;
+
+        @media (min-width: 840px) {
+            display: none;
+        }
+    }
+
+
+</style>

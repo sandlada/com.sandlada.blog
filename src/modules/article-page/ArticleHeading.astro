@@ -8,38 +8,120 @@ interface Props {
 const { headings } = Astro.props
 ---
 
-<ul class="article-headings">
-    {
-        headings.map(e => <li class={`depth-${e.depth}`}>
-            <a href={`#${e.slug}`} target="_self" class="body-small md:body-medium lg:body-large">
-                {e.text}
-            </a>
-        </li>)
-    }
-</ul>
+<div class="article-heading-toggle">
+    <button id="article-heading-expand-button" data-state="collapsed" class="button">
+        <span id="article-heading-expand-button-label">Show Table of Contents</span>
+        <md-focus-ring></md-focus-ring>
+        <md-ripple></md-ripple>
+    </button>
+
+    <div class="heading-list" id="article-heading-content-wrapper">
+        <ul class="article-headings">
+            {
+                headings.map(e => <li class={`depth-${e.depth}`}>
+                    <a href={`#${e.slug}`} target="_self" class="body-small">
+                        {e.text}
+                    </a>
+                </li>)
+            }
+        </ul>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const button = document.querySelector(`#article-heading-expand-button`) as HTMLButtonElement | null
+        const buttonLabel = button?.querySelector(`#article-heading-expand-button-label`) as HTMLElement | null
+        const contentWrapper = document.querySelector(`#article-heading-content-wrapper`) as HTMLElement | null
+
+        if(!button || !buttonLabel || !contentWrapper) {
+            return
+        }
+
+        contentWrapper.style.maxHeight = '0px'
+
+        button.addEventListener('click', () => {
+            if(button.dataset.state === 'collapsed') {
+                buttonLabel.textContent = 'Collapse'
+                button.dataset.state = 'expanded'
+                contentWrapper.style.maxHeight = `${contentWrapper.scrollHeight}px`
+            } else {
+                buttonLabel.textContent = 'Show Table of Contents'
+                button.dataset.state = 'collapsed'
+                contentWrapper.style.maxHeight = '0px'
+            }
+        })
+    })
+</script>
 
 <style>
+    @reference "../../styles/global.css";
+
+    .button {
+        @apply bg-surface outline outline-outline-variant;
+
+        transition-property: color, background, outline-color, border-radius;
+        transition-duration: 150ms;
+
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 40px;
+        border-style: none;
+        width: 100%;
+        border-radius: 24px;
+        cursor: pointer;
+
+        &:active,
+        &:hover:active {
+            border-radius: 12px;
+        }
+
+        &[data-state="expanded"] {
+            @apply bg-primary-container text-on-primary-container;
+            outline-color: transparent;
+            border-radius: 24px 24px 0px 0px;
+        }
+    }
+
+    .article-heading-toggle {
+        margin-block: 12px;
+        border-radius: 24px;
+        @apply bg-surface-container;
+    }
+
+    .button[data-state="expanded"] + .heading-list {
+    }
+
+    .heading-list {
+        overflow: hidden;
+        transition: max-height 400ms ease;
+        padding-inline: 12px;
+    }
+
     ul.article-headings {
         all: unset;
         display: flex;
         flex-direction: column;
         gap: 8px;
+        padding-block: 16px;
+
         li {
             all: unset;
             box-sizing: border-box;
             display: inline-flex;
-            
+
             & a {
                 text-underline-offset: 2px;
                 color: var(--md-sys-color-primary);
                 transition-property: text-underline-offset;
                 transition-duration: 150ms;
-                
+
                 &:hover {
                     text-underline-offset: 4px;
                 }
             }
-
 
             &.depth-1 {
             }

@@ -1,0 +1,179 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+    headings: Array<MarkdownHeading>
+}
+
+const { headings } = Astro.props
+---
+
+<nav class="article-outline-nav" aria-label="On this page">
+    <span class="outline-label">On this page</span>
+    <ul class="outline-list">
+        {
+            headings.map(h => (
+                <li class={`depth-${h.depth}`}>
+                    <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+            ))
+        }
+    </ul>
+</nav>
+
+<script is:inline>
+    (() => {
+        const nav = document.querySelector('.article-outline-nav');
+        if (!nav) return;
+
+        const links = [...nav.querySelectorAll('a')];
+        const slugs = links.map(a => a.getAttribute('href')).filter(Boolean);
+
+        let currentActiveSlug = '';
+
+        const updateActive = () => {
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                const isActive = href === `#${currentActiveSlug}`;
+                link.classList.toggle('active', isActive);
+                link.setAttribute('aria-current', isActive ? 'true' : 'false');
+            });
+        };
+
+        // Smooth scroll on click
+        links.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = link.getAttribute('href');
+                if (!href) return;
+                const target = document.querySelector(href);
+                if (!target) return;
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest',
+                });
+                currentActiveSlug = href.slice(1);
+                updateActive();
+            });
+        });
+
+        // Intersection Observer for active heading tracking
+        const setupObserver = () => {
+            const headingElements = slugs
+                .map(slug => document.querySelector(slug))
+                .filter(el => el instanceof HTMLElement);
+
+            if (headingElements.length === 0) return;
+
+            const visibleIds = new Set();
+            const observer = new IntersectionObserver((entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting) {
+                        visibleIds.add(entry.target.id);
+                    } else {
+                        visibleIds.delete(entry.target.id);
+                    }
+                }
+
+                if (visibleIds.size > 0) {
+                    let topmost = null;
+                    let topmostTop = Infinity;
+                    for (const id of visibleIds) {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            if (rect.top < topmostTop) {
+                                topmostTop = rect.top;
+                                topmost = id;
+                            }
+                        }
+                    }
+                    currentActiveSlug = topmost || currentActiveSlug;
+                }
+                updateActive();
+            }, {
+                rootMargin: '-80px 0px -75% 0px',
+                threshold: 0,
+            });
+
+            headingElements.forEach(el => observer.observe(el));
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupObserver);
+        } else {
+            setupObserver();
+        }
+    })();
+</script>
+
+<style>
+    @reference "../../styles/global.css";
+
+    .article-outline-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-block: 16px;
+        padding-inline: 8px;
+    }
+
+    .outline-label {
+        @apply title-small;
+        color: var(--md-sys-color-on-surface-variant);
+        padding-inline: 8px;
+        padding-block-end: 8px;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .outline-list {
+        all: unset;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .outline-list li {
+        all: unset;
+        display: block;
+    }
+
+    .outline-list a {
+        all: unset;
+        @apply label-small;
+        color: var(--md-sys-color-on-surface-variant);
+        padding-inline: 8px;
+        padding-block: 6px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: block;
+        transition-property: color, background-color, border-color;
+        transition-duration: 150ms;
+    }
+
+    .outline-list a:hover {
+        color: var(--md-sys-color-on-surface);
+        background-color: var(--md-sys-color-surface-variant);
+    }
+
+    .outline-list a.active {
+        color: var(--md-sys-color-on-primary-container);
+        background-color: var(--md-sys-color-primary-container);
+    }
+
+    .depth-2 a {
+        padding-inline-start: 16px;
+    }
+    .depth-3 a {
+        padding-inline-start: 28px;
+    }
+    .depth-4 a {
+        padding-inline-start: 40px;
+    }
+    .depth-5 a {
+        padding-inline-start: 52px;
+    }
+    .depth-6 a {
+        padding-inline-start: 64px;
+    }
+</style>
