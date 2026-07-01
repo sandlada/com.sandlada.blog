@@ -19,7 +19,8 @@
         "strictNullChecks": true
     },
     "exclude": [
-        "dist"
+        "dist",
+        "public/vendor"
     ],
     "extends": "astro/tsconfigs/strictest",
     "include": [
