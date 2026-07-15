@@ -1,0 +1,339 @@
+---
+id: "BRPf9zYeqAD0Jgg3p-abG"
+category: ["programming", "ddd"]
+related: [
+    "xY0bH2UkIr9ko03hQv9Ag",
+    "sbldsvQi1K4JXOYBZhdrV"
+]
+references: []
+order: 1
+
+meta:
+    title: "初探Domain-Driven Design - 領域驅動設計"
+    description: "本文深入淺出地介紹 Domain-Driven Design（領域驅動設計）的核心概念，從戰略設計到戰術設計，涵蓋限界上下文、通用語言、實體、值物件、聚合、領域事件、儲存庫等模式，幫助開發者理解 DDD 的本質、適用場景與實踐方式。"
+    author: "kai-orion"
+    keywords: [
+        "ddd",
+        "domain-driven-design",
+        "領域驅動設計",
+        "strategic-design",
+        "tactical-design",
+        "bounded-context",
+        "ubiquitous-language",
+        "aggregate",
+        "aggregate-root",
+        "value-object",
+        "domain-service",
+        "domain-event",
+        "entity",
+        "repository",
+        "factory",
+        "context-mapping",
+        "domain-model"
+    ]
+    publishedAt: 2026-7-10
+    createdAt: 2026-7-10
+    updatedAt: 2026-7-15
+    language: "zh_Hant"
+
+hasOverview: true
+overview: "本文從哲學基礎到程式碼實踐，系統性介紹 Domain-Driven Design（領域驅動設計）的核心概念，包含戰略設計的限界上下文與通用語言、戰術設計的實體、值物件、聚合、領域服務、儲存庫、領域事件、工廠等模式，並探討 DDD 的適用場景與經典專案結構，適合想要了解 DDD 本質與實踐方式的初學者。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: true
+cover:
+    image: "intro-ddd.cover.png"
+    alt: "The picture that shows Introduce Domain-Driven Design."
+---
+
+# 初探 Domain-Driven Design - 領域驅動設計
+
+Domain-Driven Design，簡稱DDD，領域驅動設計，是一種程式架構思想和方法。DDD强調將業務邏輯和數據放置在領域中，並通過代碼結構反映出這個領域，它强調“做什麽”。
+
+1. DDD是一個實踐
+2. 代碼的核心就是業務
+
+## DDD的核心哲學
+
+- **通用語言**（Ubiquitous Language）：團隊（領域專家、開發者、設計師等）共用一套統一的語言來描述業務概念，並將這套語言反映在程式碼中。例如，如果業務中用「訂單」而非「交易記錄」，那麼程式碼中的類別名稱也應該是 Order 而非 TransactionRecord。通用語言是 DDD 的溝通基石，確保所有人對同一概念有一致的理解。
+- **領域與子領域**
+  - 核心領域：複雜業務邏輯，是專案最有價值且最值得投入的部分
+  - 子領域：為核心領域提供輔助邏輯
+  - 通用子領域：非業務核心，可考慮使用現成解決方案
+- **限界上下文**（Bounded Context）：每個子領域都擁有自己的限界上下文，在該上下文內部，領域模型有統一的含義和規則。不同上下文之間通過**上下文映射**（Context Mapping）進行整合。例如，「產品」在庫存上下文和銷售上下文中可能具有不同的屬性與行為，兩者應各自維護自己的 Product 模型。
+
+### 戰術設計
+
+戰術設計是 DDD 中用於具體實現的程式碼層模式，它提供了一系列構建領域模型的具體技巧。與戰略設計關注宏觀的邊界劃分不同，戰術設計關注的是在程式碼層面如何表達領域概念。
+
+DDD 的戰術模式包括：
+
+- **Entity（實體）**：具有唯一識別的領域物件
+- **Value Object（值物件）**：由屬性值定義的不可變物件
+- **Aggregate（聚合）**：一組相關物件的集合，通過聚合根對外訪問
+- **Repository（儲存庫）**：提供聚合的持久化查詢與儲存介面
+- **Domain Service（領域服務）**：處理不適合歸屬於實體或值物件的領域邏輯
+- **Domain Event（領域事件）**：捕獲領域中發生的重大事件
+- **Factory（工廠）**：封裝複雜物件的建立邏輯
+
+以下將逐一探討這些模式。
+
+## DDD的適用範圍
+
+DDD適合複雜且非簡單的CRUD的項目，因爲：
+
+- 大部分業務邏輯處於Domain，在設計Domain時可以直接和需求溝通
+- 通過聚合與聚合根來保證業務規則完整性
+- Domain包含一系列模式分層
+- 清晰的架構邊界
+
+**并非所有項目都應該采用DDD。**
+- DDD將複雜的業務邏輯放置在領域中，開發者需要在開發之前進行領域模型建模
+- 投入成本高（陡峭的學習成本，高團隊協作性要求）
+- 不適合簡單的CRUD項目
+
+## DDD最經典的項目結構
+
+```plaintext
+Project
+└── src
+    ├── UI
+    ├── Application
+    ├── Domain
+    │   ├── Aggregates
+    │   ├── Events
+    │   ├── Primitives
+    │   ├── Repositories
+    │   ├── ValueObjects
+    │   └── Exceptions
+    └── Infrastructure
+```
+
+## DDD的模式
+
+### Primitives
+
+模型的基礎信息，通常是一些接口和抽象類。
+
+```csharp
+public abstract class Entity {
+    public int Id { get; protected set; }
+}
+```
+
+### Entity
+
+Entity，實體，一個具有唯一標識符，且有連續生命周期（更改一些屬性后仍是同一個實體，例如儅一個人長大一歲后，這個人還是同一個人）。
+
+有哪些實體？
+
+- 學生
+- 教師
+- 課程
+- 歌曲
+- 歌手
+- 播放器
+- 課本
+- 報紙
+- 錄音機
+
+### Aggregates
+
+Aggregate表示**聚合**，DDD的核心。Aggregates用於存放聚合根和聚合的内部實體。
+
+- 聚合是一個實體，是業務邏輯的單元，**是一個數據修改單元**，是一組在業務上關聯在一起的**實體和值對象的集合**。
+- 聚合根是一個實體，是聚合的特定實體，是整個聚合們的外部入口。
+
+如何判斷一個實體是聚合還是聚合根？
+
+1. 是否可以獨立存在
+  - 是：聚合根
+  - 否：聚合
+2. 是否是業務創造的主要入口
+  - 是：聚合根
+  - 否：聚合
+
+如下結構中，Student是聚合根，Course是聚合根，而Enrollment是聚合內的實體，Score是一個實體或者是值對象（既不是聚合也不是聚合根）。通過CourseId和StudentId就可以在Enrollment中表達選課邏輯，通過Student對外公開選課動作。
+
+```plaintext
+/Aggregates
+  ├── Student.cs
+  ├── Enrollment.cs
+  ├── Score.cs
+  └── Course.cs
+```
+
+```csharp
+public class Enrollment {
+    public Guid Id { get; private set; }
+
+    public Guid StudentId { get; private set; }
+    // Course 是另一個聚合，這裡只保存其Id
+    public Guid CourseId { get; private set; }
+    // ...
+}
+```
+
+```csharp
+public class Student {
+    public Guid Id { get; private set; }
+
+    // 聚合對象的列表
+    private readonly List<Enrollment> _enrollments = new List<Enrollment>();
+    // 對外公開的聚合對象的只讀列表
+    public IReadOnlyCollection<Enrollment> Enrollments => _enrollments.AsReadOnly();
+}
+```
+
+### ValueObjects
+
+ValueObject表示**值對象**，通常用來存放地址、性別、年齡等表示值得對象。
+
+```csharp
+public sealed class Gender : IEquatable<Gender> {
+
+    public string Name { get; }
+    public string Code { get; }
+
+    private Gender(string name, string code) {
+        this.Name = name;
+        this.Code = code;
+    }
+
+    public static readonly Gender Male = new("Male", "M");
+    public static readonly Gender Female = new("Female", "F");
+    public static readonly Gender Other = new("Other", "O");
+
+    private static IReadOnlyCollection<Gender> GetAllGenders() => [Male, Female, Other];
+
+    public static Result<Gender> FromCode(string code) {
+        if (string.IsNullOrWhiteSpace(code)) {
+            return Result.Failure<Gender>("Gender code cannot be empty.");
+        }
+        var gender = GetAllGenders().FirstOrDefault(gender => gender.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+        return gender is not null ? Result.Success(gender) : Result.Failure<Gender>($"Invalid gender code: '{code}'.");
+    }
+
+    public override bool Equals(object? obj) => obj is Gender other && Equals(other);
+    public bool Equals(Gender? other) => other is not null && this.Code == other.Code;
+    public override int GetHashCode() => this.Code.GetHashCode();
+    public static bool operator ==(Gender left, Gender right) => left.Equals(right);
+    public static bool operator !=(Gender left, Gender right) => !left.Equals(right);
+    public override string ToString() => this.Name;
+
+}
+```
+
+### Domain Services
+
+領域服務用於封裝那些不適合放在實體或值物件中的領域邏輯。當一個領域操作涉及多個領域物件，或是一個流程不屬於任何單一實體時，就應該考慮使用領域服務。
+
+領域服務的特點：
+
+- **無狀態**（Stateless）：不持有業務狀態
+- **參數與返回值皆為領域物件**：與基礎設施無關
+- **行為來自領域**：命名與語義源自通用語言
+
+```csharp
+public class EnrollmentService {
+
+    private readonly IStudentRepository _studentRepository;
+    private readonly ICourseRepository _courseRepository;
+
+    public EnrollmentService(
+        IStudentRepository studentRepository,
+        ICourseRepository courseRepository) {
+        _studentRepository = studentRepository;
+        _courseRepository = courseRepository;
+    }
+
+    public async Task EnrollStudentAsync(Guid studentId, Guid courseId) {
+        var student = await _studentRepository.FindOneByIdAsync(studentId);
+        var course = await _courseRepository.FindOneByIdAsync(courseId);
+
+        if (student is null)
+            throw new ArgumentException("Student not found");
+        if (course is null)
+            throw new ArgumentException("Course not found");
+
+        student.EnrollIn(course);
+    }
+}
+```
+
+### Repositories
+
+Repository表示儲存模式的意圖。通常聲明數據的創建、查詢、更新、刪除等操作。Repositories不會在DDD中實現。
+
+```csharp
+public interface IStudentRepository {
+
+    Task AddOneAsync(Student student, CancellationToken cancellationToken = default);
+
+    Task<Student?> FindOneByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<Student>> FindAllAsync(CancellationToken cancellationToken = default);
+
+    Task<Student?> RemoveOneByIdAsync(Guid id, CancellationToken cancellationToken);
+
+}
+```
+
+### Events
+
+領域事件用於捕獲領域中已經發生的重要事實（例如 OrderPlaced、PaymentConfirmed），它是實現**最終一致性**與**事件溯源**（Event Sourcing）的基礎。
+
+領域事件的特點：
+
+- 使用**過去式**命名（OrderPlaced、PaymentConfirmed）
+- **不可變**（Immutable）
+- 包含事件發生時的**必要資料**
+
+```csharp
+public class OrderPlacedEvent : IDomainEvent {
+    public Guid OrderId { get; }
+    public Guid CustomerId { get; }
+    public DateTime OccurredAt { get; }
+    public decimal TotalAmount { get; }
+
+    public OrderPlacedEvent(Guid orderId, Guid customerId, decimal totalAmount) {
+        OrderId = orderId;
+        CustomerId = customerId;
+        TotalAmount = totalAmount;
+        OccurredAt = DateTime.UtcNow;
+    }
+}
+```
+
+在 DDD 中，聚合根會在內部觸發領域事件，然後由基礎設施層負責將事件發佈到訊息佇列或事件匯流排中，供其他限界上下文訂閱和處理。
+
+```csharp
+public class Order : AggregateRoot {
+    // ...
+
+    public void PlaceOrder() {
+        // 業務邏輯...
+
+        AddDomainEvent(new OrderPlacedEvent(this.Id, this.CustomerId, this.TotalAmount));
+    }
+}
+```
+
+領域事件是實現限界上下文之間**鬆散耦合**的關鍵手段——一個上下文只需發佈事件，其他上下文透過訂閱來響應，彼此無需直接依賴。
+
+## 總結
+
+DDD 不僅是一套程式碼模式，更是一種**思考方式**。它强調：
+
+- 讓程式碼結構反映業務領域
+- 通過通用語言拉近技術與業務的距離
+- 透過限界上下文管理複雜度
+- 利用聚合保證業務規則的一致性
+
+然而，DDD 並非銀彈。它最適合**業務邏輯複雜**的項目，而對以 CRUD 為主的簡單應用，傳統的分層架構可能更加務實。
+
+建議初學者從**值物件**和**聚合**入手，先在小型模組中實踐 DDD 的核心模式，再逐步擴展到整個專案。

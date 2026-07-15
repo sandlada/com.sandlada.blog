@@ -1,0 +1,827 @@
+---
+id: "sbldsvQi1K4JXOYBZhdrV"
+category: ["programming"]
+related: []
+references: []
+order: 1
+
+meta:
+    title: "Result 模式與 ROP 軌道導向編碼程式"
+    description: ""
+    author: "kai-orion"
+    keywords: [
+        "Result",
+        "Design Pattern",
+        "ROP",
+        "Railway Oriented Programming",
+        "Monad",
+        "Functional Programming",
+        "TypeScript"
+    ]
+    publishedAt: 2026-7-1
+    createdAt: 2026-7-1
+    updatedAt: 2026-7-1
+    language: "zh_Hant"
+
+hasOverview: true
+overview: "本文以 TypeScript 實作為例，深入介紹 Result 模式與 ROP（Railway Oriented Programming，軌道導向編程）的核心概念。從 Result 的基礎建置、完整 Combinator 套件（map、andThen、match、tryCatch 等），到非同步流程整合、錯誤累積與快速失敗的策略選擇，以及 ADT 錯誤建模的編譯時窮盡檢查技巧，幫助開發者以顯式控制流代替 try catch 隱式控制流，提升程式碼的型別安全與可維護性。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: true
+cover:
+    image: "result-design-mode.cover.png"
+    alt: "The blog picture shows the text Result Pattern and ROP."
+---
+
+# Result 模式與 ROP 軌道導向編碼程式
+
+閱讀完這篇文章，你將知道：
+
+- Result 模式的概念
+- ROP 軌道導向編碼程式的概念
+- 如何編寫一個簡易的 Result 模型
+- 如何使用 Result 模型實現 ROP 軌道導向程式
+- 認識 neverthrow 等熱門第三方 Result 庫
+- Result 的非同步整合與錯誤累積技巧
+
+這篇文章使用 TypeScript 實現 Result 和 ROP ，閲讀這篇文章意味著：
+
+- 你明白 TypeScript 或 JavaScript
+
+## Result 模式
+
+**Result 是一種顯式控制流**，可代替 try catch exception 隱式控制流。
+
+Result 將正確和錯誤視爲可預知的結果數據，錯誤值作爲結果數據與正確值一樣不觸發異常。相比 try catch exception 模式， **Result 模式利用類型系統和代碼檢查將運行時異常階段提前到編譯時錯誤階段**。
+
+在傳統 try catch exception 模式下，函數的返回值可能是成功的結果，也可能是異常，這使得函數的使用者需要額外的代碼來處理異常情況。而在 Result 模式下，**函數的返回值是一個 Result 類型**，這個類型明確地表示了函數的結果是成功還是失敗，並且提供了相應的方法來處理這些結果。
+
+預期內的業務錯誤（例如：用戶找不到、密碼錯誤、輸入格式不符）不是異常而是業務數據。既然是數據，就應該通過 Result 包裝數據。
+
+### try catch exception 模式的缺陷
+
+對於像 Java 這樣采用 Checked Exception 的語言，函數的返回值可能是成功的結果，也可能是異常，這使得函數的使用者需要額外的代碼來處理異常情況。而在 JavaScript 中，異常是非檢查的，這意味著函數的使用者可能會忽略異常處理，導致運行時錯誤。
+
+使用傳統 `try catch exception` 會造成：
+
+- 缺失編譯時代碼約束
+- 隱式控制流
+- 類型不可見
+
+如下展示了在 `try catch exception` 語境下，函數類別簽名被 throw Error 覆蓋、編譯器忽略異常放行和運行時觸發異常的代碼示例：
+
+```ts
+interface Music { id: string; name: string }
+
+function getMusicById(id: string): Music {
+    // 類型不可見： 這行代碼使函數返回類別 Music 被無視
+    if(id === '') throw new Error(`Music Identifier can not be null or empty.`)
+    return { id, name: 'Mock Music Name' }
+}
+
+// 缺失編譯時代碼約束: 編譯器根本不會檢查此行代碼是否可能觸發異常
+const result = getMusicById('')
+
+// 隱式控制流: 上述代碼執行後，此處代碼根本不會執行
+doSomething()
+```
+
+### 爲何需要 Result 模式
+
+Result 模式解決了 try catch exception 的問題：
+
+```ts
+interface AppError extends Error { }
+interface Music { id: string; name: string }
+
+function getMusicById(id: string): IResultOfT<Music, AppError> {
+    if(id === '') return Result.Failure<Music, AppError>({ message: '', name: '' })
+    return Result.Success<Music>({ id, name: 'Mock Music Name' })
+}
+
+// 此處不會出現異常，代碼正常執行，並且編譯器會檢查 result 的類型
+const result = getMusicById('')
+
+// 此處編譯時報錯：value不存在，因爲沒有驗證isSuccess
+// const value = result.value
+// 此處編譯時報錯：error不存在，因爲沒有驗證isFailure
+//const error = result.error
+
+// 因爲 result 是 Result 類型，編譯器會檢查 isSuccess 和 isFailure 的類型
+// 因爲getMusicById('')傳遞的參數值是空字符串，所以邏輯上此處代碼走else分支
+if(result.isSuccess) {
+    const value = result.value
+    doSomething()
+} else {
+    // 代碼走此處
+    const error = result.error
+}
+```
+
+### 單純使用 Result 模式的缺陷
+
+_這個問題通過 ROP 解決。_
+
+Result 模式雖然提供了清晰的正確與錯誤檢查，但在複雜條件編排下， **Result 模式存在嵌套問題**：
+
+```ts
+const res1 = work1()
+if(res1.isSuccess) {
+    const res2 = work2()
+    if(res2.isSuccess) {
+        const res3 = work3()
+        if(res3.isSuccess) {
+            // ...
+        } else {
+            return res3
+        }
+    } else {
+        return res2
+    }
+} else {
+    return res1
+}
+```
+
+## ROP 軌道導向編碼
+
+ROP， [Railway Oriented Programming](https://fsharpforfunandprofit.com/rop/) ，軌道導向編碼程式，是一種函數式編程模式。 ROP 將函數的執行流程分爲兩條軌道：
+
+- 成功軌道
+- 失敗軌道
+
+當函數執行成功時，結果會沿著成功軌道傳遞；當函數執行失敗時，錯誤會沿著失敗軌道傳遞。
+
+### ROP 如何解決 Result 模式嵌套問題
+
+上文提到 ROP 將結果劃分爲兩條軌道，我們需要通過 ROP 的多軌道編程模式，將函數的執行流程沿著成功軌道或失敗軌道傳遞，從而避免嵌套問題。
+
+假設我們定義了一組代碼，用於模擬API請求並返回 Result 類型作爲結果：
+
+```ts
+interface AppError extends Error { }
+
+// 成功
+function fetchUserProfile() { return Result.Success({ name: 'Admin' }) }
+// 成功
+function fetchUserFavorateAlbumIds() { return Result.Success(['1', '2', '3']) }
+// 失敗
+function fetchAlbumById(id: string) { return Result.Failure<void, AppError>({ name: 'FetchError', message: 'Could not fetch the album.'}) }
+// 成功
+function fetchAlbumCoverById(id: string) { return Result.Success({ cover: '' }) }
+```
+
+假設在應用層存在業務邏輯鏈條：
+
+1. 獲取用戶資料
+2. 獲取用戶喜愛的專輯ID列表
+3. 根據專輯ID列表獲取專輯資料
+4. 根據專輯資料獲取專輯封面
+
+這4步共同組合成一個業務邏輯，只要其中一步出現錯誤，整條鏈就會失敗。如下代碼示例僅僅通過 `andThen` 避免編寫冗長if else return 語句。：
+
+```ts
+const result = fetchUserProfile()
+    .tap(_ => console.log('fetchUserProfile: success!'))
+    .tapErr(_ => console.log('fetchUserProfile: failure'))
+    .andThen(fetchUserFavorateAlbumIds)
+    .tap(_ => console.log('fetchUserFavorateAlbumIds: success!'))
+    .tapErr(_ => console.log('fetchUserFavorateAlbumIds: failure!'))
+    .andThen(ids => Result.combine(ids.map(fetchAlbumById)))
+    .tap(_ => console.log('fetchAlbumById: success!'))
+    .tapErr(_ => console.log('fetchAlbumById: failure!'))
+    .andThen(albums => Result.combine(albums.map(album => fetchAlbumCoverById(album.id))))
+    .tap(_ => console.log('fetchAlbumCoverById: success!'))
+    .tapErr(_ => console.log('fetchAlbumCoverById: failure!'))
+
+if(result.isSuccess) {
+    console.log(`${result.value}`)
+} else {
+    console.log(`${result.error.name}: ${result.error.message}`)
+}
+```
+
+根據我們預先設定的模擬API代碼分析，儅代碼執行到 `fetchAlbumById` 時，會觸發失敗軌道，並且不會再執行後續的 `fetchAlbumCoverById`。
+
+如上代碼的輸出結果為：
+
+```shell
+fetchUserProfile: success!
+fetchUserFavorateAlbumIds: success!
+fetchAlbumById: failure!
+fetchAlbumCoverById: failure!
+FetchError: Could not fetch the album.
+```
+
+## 構建你的基礎 Result
+
+### 用法分析
+
+通過工廠方法 `Result.Success` 和 `Result.Failure` 來創建成功和失敗的結果：
+
+```ts
+const res1 = Result.Success()
+const res2 = Result.Failure()
+
+const res3 = Result.Success(true)
+const res4 = Result.Failure({ name: 'ErrorCode', message: 'ErrorMessage' })
+```
+
+結果通過 `isSuccess` 和 `isFailure` 屬性來區分成功和失敗。成功時可訪問 `value` ，失敗時可訪問 `error` ：
+
+```ts
+if(res3.isSuccess) {
+    // res3 是成功結果
+    // 有參數用法的 Result 可以通過 value 屬性獲取結果值
+    const value = res3.value
+} else {
+    // res3 是失敗結果
+    // 可以通過 error 屬性獲取錯誤值
+    const error = res3.error
+}
+```
+
+### 接口聲明
+
+因爲 Result 存在兩種用法，所以我們需要兩個接口（分別對應有參數用法和無參數用法）：
+
+```ts
+interface IResult {}
+interface IResultOfT {}
+```
+
+Result 將結果劃分爲成功和失敗兩種情況，其中無參數用法 `IResult` 不存在 `value`；有參數用法 `IResultOfT` 存在 `value`，所以我們需要聲明以下屬性：
+
+```ts
+interface IResult<TError = Error> {
+    readonly error    : TError
+    readonly isSuccess: boolean
+    readonly isFailure: boolean
+}
+
+interface IResultOfT<TValue, TError = Error> {
+    readonly value    : TValue
+    readonly error    : TError
+    readonly isSuccess: boolean
+    readonly isFailure: boolean
+}
+```
+
+`IResult` 和 `IResultOfT` 的 `isSuccess` 和 `isFailure` 屬性互斥，這意味著當 `isSuccess` 為 `true` 時，`isFailure` 必然為 `false`，反之亦然。
+
+根據獨特性擴展 `IResult` 和 `IResultOfT` :
+
+```ts
+interface IResultSuccess {
+    readonly isSuccess: true
+    readonly isFailure: false
+}
+interface IResultFailure<TError = Error> {
+    readonly isSuccess: false
+    readonly isFailure: true
+    readonly error    : TError
+}
+type IResult<TError = Error> = IResultSuccess | IResultFailure<TError>
+
+/**
+ * 輔助接口，用於將error，isSuccess，isFailure屬性暴露出來
+ * 與 IResultOfTBase 搭配用於後期 ROP 實現
+ */
+interface IResultBase<TError = Error> {
+    readonly error    : TError
+    readonly isSuccess: boolean
+    readonly isFailure: boolean
+}
+interface IResultOfTBase<TValue, TError = Error> extends IResultBase<TError> {
+    readonly value: TValue
+}
+
+interface IResultOfTSuccess<TValue, TError = Error> extends Omit<IResultOfTBase<TValue, TError>, 'error' | 'isSuccess' | 'isFailure'> {
+    readonly isSuccess: true
+    readonly isFailure: false
+    readonly value    : TValue
+}
+interface IResultOfTFailure<TValue, TError = Error> extends Omit<IResultOfTBase<TValue, TError>, 'value' | 'isSuccess' | 'isFailure'> {
+    readonly isSuccess: false
+    readonly isFailure: true
+    readonly error    : TError
+}
+type IResultOfT<TValue, TError = Error> = IResultOfTSuccess<TValue, TError> | IResultOfTFailure<TValue, TError>
+```
+
+### Result 實現
+
+通過一個輔助函數檢查互斥合法性：
+
+```ts
+function assertResultInvariant<TError>(isSuccess: boolean, error: TError): void {
+    if (isSuccess && error !== (NONE as unknown as TError)) throw new TypeError('Result invariant violated: success must not carry a real error.',)
+    if (!isSuccess && error === (NONE as unknown as TError)) throw new TypeError('Result invariant violated: failure must carry a real error.',)
+}
+```
+
+通過 `Success()` 和 `Failure()` 方法的重載實現有參數和無參數的用法。對於工廠方法：
+
+- `Success()` 定向到無參數 `Result`
+- `Success(value)` 定向到有參數 `ResultOfT`
+
+```ts
+const NONE: unique symbol = Symbol.for('result:none')
+
+class Result<TError = Error> implements IResultBase<TError> {
+    readonly error      : TError
+    readonly isSuccess  : boolean
+    get      isFailure(): boolean { return !this.isSuccess }
+
+    protected constructor(isSuccess: boolean, error?: TError) {
+        this.isSuccess = isSuccess;
+        if (error === undefined) {
+            this.error = NONE as unknown as TError
+        } else {
+            assertResultInvariant(isSuccess, error)
+            this.error = error
+        }
+    }
+
+    static Success(): IResult
+    static Success<TValue>(value: TValue): IResultOfT<TValue>
+    static Success<TValue>(value?: TValue): IResult | IResultOfT<TValue> {
+        if (arguments.length === 0) return new Result<Error>(true, (NONE as unknown) as Error) as unknown as IResult
+        return new ResultOfT<TValue, Error>(value!, true) as unknown as IResultOfT<TValue>
+    }
+
+    static Failure(error: Error): IResult
+    static Failure<TValue, TError>(error: TError): IResultOfT<TValue, TError>
+    static Failure<TValue, TError>(error?: TError): IResult | IResultOfT<TValue, TError> {
+        if (error === undefined) throw new TypeError('Result.Failure requires an error argument.')
+        return new ResultOfT<TValue, TError>(undefined, false, error) as unknown as IResultOfT<TValue, TError>
+    }
+}
+
+export class ResultOfT<TValue, TError = Error> implements IResultOfTBase<TValue, TError> {
+    readonly isSuccess: boolean
+    readonly isFailure: boolean
+    readonly error    : TError
+    readonly #value   : TValue | undefined
+
+    constructor(value?: TValue, isSuccess?: boolean, error?: TError) {
+        const success  = isSuccess ?? true
+        this.isSuccess = success
+        this.isFailure = !success
+
+        const actualError = error !== undefined ? error : (NONE as unknown as TError);
+        assertResultInvariant(success, actualError);
+        this.error = actualError;
+        this.#value = value
+    }
+
+    get value(): TValue {
+        if (!this.isSuccess) throw new TypeError('Cannot access value on a failure result. Check isSuccess before accessing value.',)
+        return this.#value as TValue
+    }
+}
+```
+
+上述實作已爲你的 ROP 鏈式調用打下基礎，但要讓 Result 真正發揮威力，我們還需要補上關鍵的 Combinator 方法。
+
+## 完整 Combinator 套件
+
+`andThen` 和 `tap` 是 ROP 的核心，但僅有它們不足以覆蓋真實世界的場景。以下是一組必備的 Combinator：
+
+### map / mapErr —— 單軌道轉換
+
+`map` 對成功值做純轉換（Functor 操作），不產生新的 Result 嵌套；`mapErr` 則轉換錯誤類型：
+
+```ts
+function map<T, U, E>(
+  result: IResultOfT<T, E>,
+  fn: (value: T) => U
+): IResultOfT<U, E> {
+  if (result.isFailure) return result as unknown as IResultOfT<U, E>
+  return Result.Success(fn(result.value))
+}
+
+function mapErr<T, E, F>(
+  result: IResultOfT<T, E>,
+  fn: (error: E) => F
+): IResultOfT<T, F> {
+  if (result.isSuccess) return Result.Success(result.value) as unknown as IResultOfT<T, F>
+  return Result.Failure<T, F>(fn(result.error))
+}
+
+// 使用範例
+const numResult = Result.Success(5)
+  .map(x => x * 2)           // IResultOfT<number> → 值為 10
+  .map(x => `Count: ${x}`)   // IResultOfT<string> → 值為 "Count: 10"
+```
+
+`map` 與 `andThen` 的關鍵區別：`map` 接受純函數 `T → U`，`andThen` 接受返回 Result 的函數 `T → Result<U>`。
+
+### orElse —— 失敗軌道的備援
+
+`orElse` 允許在失敗時從錯誤中恢復，將失敗軌道拉回成功軌道：
+
+```ts
+function orElse<T, E>(
+  result: IResultOfT<T, E>,
+  fn: (error: E) => IResultOfT<T, E>
+): IResultOfT<T, E> {
+  if (result.isSuccess) return result
+  return fn(result.error)
+}
+
+// 使用範例：從快取備援
+const data = await fetchFromApi(id)
+  .orElse(err => {
+    if (err.kind === 'NetworkError') return fetchFromCache(id)
+    return Result.Failure<T, AppError>(err) // 非網絡錯誤則繼續失敗
+  })
+```
+
+### unwrap / unwrapOr —— 提取值
+
+在邊界處（如 Controller / UI 層）最終提取結果：
+
+```ts
+function unwrapOr<T>(result: IResultOfT<T, unknown>, defaultValue: T): T {
+  return result.isSuccess ? result.value : defaultValue
+}
+
+// 使用範例
+const displayName = unwrapOr(userResult, '訪客')
+```
+
+### match —— 窮盡式雙分支處理
+
+`match` 強制你在同一個地方同時處理成功與失敗，搭配 TypeScript 的窮盡檢查可以有效防止遺漏分支：
+
+```ts
+function match<T, E, A>(
+  result: IResultOfT<T, E>,
+  onSuccess: (value: T) => A,
+  onFailure: (error: E) => A
+): A {
+  return result.isSuccess ? onSuccess(result.value) : onFailure(result.error)
+}
+
+// 使用範例
+const message = match(result, {
+  onSuccess: value => `操作成功: ${value}`,
+  onFailure: error => `操作失敗: ${error.message}`,
+})
+// 編譯器保證 message 一定有值
+```
+
+### tryCatch / fromThrowable —— 捕獲異常
+
+這是 Result 模式與舊有 throw 程式碼的橋樑，將可能拋異常的函數包裝為返回 Result：
+
+```ts
+function tryCatch<T, E>(
+  fn: () => T,
+  onError: (error: unknown) => E
+): IResultOfT<T, E> {
+  try {
+    return Result.Success(fn())
+  } catch (e) {
+    return Result.Failure<T, E>(onError(e))
+  }
+}
+
+// 高階版本：將函數增強為永不拋異常
+function fromThrowable<T, E, Args extends unknown[]>(
+  fn: (...args: Args) => T,
+  onError: (error: unknown) => E
+): (...args: Args) => IResultOfT<T, E> {
+  return (...args: Args) => {
+    try {
+      return Result.Success(fn(...args))
+    } catch (e) {
+      return Result.Failure<T, E>(onError(e))
+    }
+  }
+}
+
+// 使用範例：包裝 JSON.parse
+const safeParseJSON = fromThrowable(JSON.parse, () => ({
+  kind: 'ParseError' as const,
+  message: 'Invalid JSON string'
+}))
+const parsed = safeParseJSON('{"key": "value"}')
+// parsed 為 IResultOfT，永不拋異常
+```
+
+`match` 和 `tryCatch` 補齊了 Result 模式的關鍵拼圖：前者確保消費端窮盡處理，後者確保生產端安全包裝。
+
+## 錯誤建模：代數資料類型
+
+有了 `match` 之後，錯誤類型的設計就變得至關重要。**將錯誤建模為代數資料類型（Algebraic Data Type, ADT）**，可以讓編譯器在編譯時確保所有錯誤分支都被處理。
+
+### 為何需要 ADT 錯誤
+
+如果錯誤只是一個 `Error` 字串，`match` 的 `onFailure` 只知道「有錯誤」，卻不知道是哪種錯誤：
+
+```ts
+// undefined 的錯誤類型 — 無法區分錯誤種類
+type AppResult<T> = IResultOfT<T, Error>
+
+match(result, {
+  onSuccess: v => v,
+  onFailure: e => {
+    // e 是 Error，但無法得知具體是哪種錯誤
+    // 需要自己做 instanceof 判斷，且沒有編譯器保護
+  }
+})
+```
+
+### 使用 Discriminated Union 建模錯誤
+
+將所有可能的業務錯誤定義為一個聯合類型，每個變體都有一個獨特的 `kind` 標籤：
+
+```ts
+type DomainError =
+  | { kind: 'NotFound';         id: string }
+  | { kind: 'ValidationFailed'; fields: string[]; message: string }
+  | { kind: 'Unauthorized';     userId: string }
+  | { kind: 'RateLimited';      retryAfterMs: number }
+  | { kind: 'NetworkError';     statusCode: number; message: string }
+
+type AppResult<T> = IResultOfT<T, DomainError>
+```
+
+### 窮盡式錯誤處理
+
+當 `match` 搭配 ADT 和 TypeScript 的 `never` 類型時，編譯器會強制你處理所有錯誤分支：
+
+```ts
+function exhaustiveMatch(domainError: DomainError): string {
+  switch (domainError.kind) {
+    case 'NotFound':
+      return `找不到資源: ${domainError.id}`
+    case 'ValidationFailed':
+      return `驗證失敗: ${domainError.fields.join(', ')}`
+    case 'Unauthorized':
+      return `使用者 ${domainError.userId} 未經授權`
+    case 'RateLimited':
+      return `請求過於頻繁，請在 ${domainError.retryAfterMs}ms 後重試`
+    case 'NetworkError':
+      return `網路錯誤 (${domainError.statusCode}): ${domainError.message}`
+    default:
+      // 確保所有分支都被覆蓋 — 如果新增了錯誤變體，這裡會報錯
+      const _exhaustive: never = domainError
+      return _exhaustive
+  }
+}
+```
+
+當你日後在 `DomainError` 中新增一個錯誤變體（例如 `{ kind: 'QuotaExceeded'; limit: number }`），編譯器會在 `exhaustiveMatch` 處報錯，提醒你需要處理新的錯誤類型。**這將運行時遺漏錯誤提前到了編譯時**——這正是 Result 模式的終極威力。
+
+## 非同步流程整合
+
+真實世界的應用大部分操作都是非同步的。ROP 鏈需要能夠與 `Promise` 無縫協作。
+
+### fromPromise —— 安全包裝非同步操作
+
+將可能 reject 的 Promise 包裝為 `Promise<IResultOfT>`：
+
+```ts
+async function fromPromise<T, E>(
+  promise: Promise<T>,
+  onError: (error: unknown) => E
+): Promise<IResultOfT<T, E>> {
+  try {
+    const value = await promise
+    return Result.Success(value)
+  } catch (e) {
+    return Result.Failure<T, E>(onError(e))
+  }
+}
+
+// 使用範例
+const userResult = await fromPromise(
+  fetch('/api/user').then(r => r.json()),
+  () => ({ kind: 'NetworkError' as const, statusCode: 0, message: '請求失敗' })
+)
+```
+
+### andThenAsync —— 非同步鏈式調用
+
+`andThen` 的同歩版本無法處理回調函數返回 Promise 的情況。`andThenAsync` 解決此問題：
+
+```ts
+async function andThenAsync<T, U, E>(
+  result: IResultOfT<T, E>,
+  fn: (value: T) => Promise<IResultOfT<U, E>>
+): Promise<IResultOfT<U, E>> {
+  if (result.isFailure) return result as unknown as IResultOfT<U, E>
+  return fn(result.value)
+}
+
+// 真實場景：多步驟非同步業務流程
+async function placeOrder(userId: string, productIds: string[]) {
+  let result: IResultOfT<User, DomainError> = await fromPromise(
+    fetchUser(userId),
+    () => ({ kind: 'NotFound' as const, id: userId })
+  )
+
+  result = await andThenAsync(result, async user => {
+    if (user.balance <= 0) return Result.Failure<User, DomainError>({
+      kind: 'ValidationFailed' as const,
+      fields: ['balance'],
+      message: '餘額不足'
+    })
+    return fromPromise(
+      createOrder(userId, productIds),
+      () => ({ kind: 'NetworkError' as const, statusCode: 500, message: '建立訂單失敗' })
+    )
+  })
+
+  return result
+}
+```
+
+### 同步與非同步混合
+
+在一個 ROP 鏈中混合同步和异步操作，可以封裝一個配接器來統一類型：
+
+```ts
+// 將同步的 andThen 升級為可與非同步鏈相容
+function andThenAsyncFn<T, U, E>(
+  fn: (value: T) => IResultOfT<U, E> | Promise<IResultOfT<U, E>>
+): (value: T) => Promise<IResultOfT<U, E>> {
+  return async (value) => {
+    const next = fn(value)
+    return next instanceof Promise ? next : Promise.resolve(next)
+  }
+}
+```
+
+## 錯誤累積 vs 快速失敗
+
+ROP 的核心假設是**快速失敗**（fail-fast）：只要一步出錯，整條鏈就短路。這對大部分業務場景是合理的，但對於某些場景——例如表單驗證——你希望**累積所有錯誤**，而不是遇到第一個錯誤就停止。
+
+### 快速失敗的侷限
+
+```ts
+const validationResult = await validateName(input)
+  .andThen(name => validateEmail(input))   // 如果 name 驗證失敗，email 檢查不會執行
+  .andThen(email => validateAge(input))    // 同樣不會執行
+// 使用者只能看到「姓名格式錯誤」，而非全部三個欄位的錯誤
+```
+
+### Validation 模式：錯誤累積
+
+從範疇論的角度看，**Result 是 Monad**（短路語義），**Validation 是 Applicative**（累積語義）。兩者共享類似的接口，但組合方式不同：
+
+```ts
+// Validation 類型：累積錯誤而非短路
+interface Validation<T, E> {
+  readonly isSuccess: boolean
+  readonly value?: T
+  readonly errors: E[]  // 錯誤陣列而非單一錯誤
+}
+
+// combine 的驗證版本：收集所有錯誤
+function combineValidations<T, E>(
+  validations: Validation<T, E>[]
+): Validation<T[], E> {
+  const errors = validations.flatMap(v =>
+    v.isSuccess ? [] : v.errors
+  )
+  if (errors.length > 0) return { isSuccess: false, errors }
+  return {
+    isSuccess: true,
+    value: validations.map(v => v.value!),
+    errors: []
+  }
+}
+
+// 表單驗證範例：同歩收集所有欄位錯誤
+const formResult = combineValidations([
+  validateName(form.name),
+  validateEmail(form.email),
+  validateAge(form.age),
+])
+
+if (!formResult.isSuccess) {
+  // formResult.errors 包含所有三個欄位的錯誤
+  showFormErrors(formResult.errors)
+}
+```
+
+**何時使用哪一種？**
+
+| 場景               | 策略             | 類型                      |
+| ------------------ | ---------------- | ------------------------- |
+| 順序依賴的業務邏輯 | 快速失敗（短路） | Result（Monad）           |
+| 獨立欄位的表單驗證 | 錯誤累積         | Validation（Applicative） |
+| 批量資料處理       | 錯誤累積         | Validation                |
+| API 請求鏈         | 快速失敗         | Result                    |
+
+## 實作反思與改進
+
+我們的實作可以工作，但存在一些值得探討的設計取捨：
+
+### 問題 1：IResult／IResultOfT 的二分
+
+文章將無值（`Result.Success()`）和有值（`Result.Success(value)`）分為兩個介面體系。這在某些場景下更精確，但也增加了複雜度。**多數第三方庫只用一個 `Result<T, E>`，無值時以 `void` 表示**：
+
+```ts
+// 更簡潔的單一泛型方案
+type Result<T, E = Error> =
+  | { success: true; value: T }
+  | { success: false; error: E }
+
+// 無值用法：Result<void, Error>
+const emptySuccess: Result<void, Error> = { success: true, value: undefined }
+```
+
+### 問題 2：工廠方法內部拋異常
+
+`assertResultInvariant` 和 `Failure()` 無參數調用使用 `throw`，這與 Result 模式「以值代替異常」的核心理念相悖。更理想的做法是：
+
+```ts
+// 使用 sentinel 物件而非拋異常
+const INVALID_ERROR = Symbol('result:invalid-error')
+
+function createFailure<T, E>(error?: E): IResultOfT<T, E> {
+  if (error === undefined) {
+    // 返回一個標記為無效的 Result，而非拋異常
+    return { isSuccess: false, isFailure: true, error: INVALID_ERROR as unknown as E }
+  }
+  return { isSuccess: false, isFailure: true, error }
+}
+```
+
+### 問題 3：類別層級導致 Combinator 重複
+
+目前 `Result` 和 `ResultOfT` 是兩個獨立類別，若要為兩者都實作 `map` / `andThen` 等 Combinator，會產生大量重複程式碼。**選用單一泛型類別可避免此問題**：
+
+```ts
+// 單一類別 + 泛型
+class ResultCore<T, E = Error> {
+  private constructor(
+    readonly isSuccess: boolean,
+    readonly value?: T,
+    readonly error?: E
+  ) {}
+
+  static ok<T, E = Error>(value: T): ResultCore<T, E> {
+    return new ResultCore(true, value)
+  }
+  static fail<T = never, E = Error>(error: E): ResultCore<T, E> {
+    return new ResultCore<T, E>(false, undefined, error)
+  }
+
+  map<U>(fn: (value: T) => U): ResultCore<U, E> {
+    return this.isSuccess
+      ? ResultCore.ok(fn(this.value!))
+      : ResultCore.fail(this.error!)
+  }
+
+  andThen<U>(fn: (value: T) => ResultCore<U, E>): ResultCore<U, E> {
+    return this.isSuccess ? fn(this.value!) : ResultCore.fail(this.error!)
+  }
+}
+```
+
+### 問題 4：類型縮小的瑣碎性
+
+目前的使用者必須手動檢查 `isSuccess` 後才能存取 `value`。這在使用 `match` 時不是問題，但在表達式中使用 `if` 會中斷 ROP 鏈。**考慮提供 `unwrap` 搭配預設值的方法**已在上述 Combinator 中介紹。
+
+## 第三方生態系
+
+無需重複造輪子——TypeScript 社群已有成熟的 Result 實作：
+
+### neverthrow
+
+[neverthrow](https://github.com/supermacro/neverthrow) 是 TypeScript 生態中最受歡迎的 Result 庫，完整支援 ROP 鏈式調用、非同步操作和豐富的 Combinator：
+
+```ts
+import { ok, err, Result } from 'neverthrow'
+
+const result: Result<string, Error> = ok('hello')
+  .map(s => s.toUpperCase())
+  .andThen(s => s.length > 0 ? ok(s) : err(new Error('empty')))
+```
+
+### oxide.ts
+
+[oxide.ts](https://github.com/fluffynuts/oxide.ts) 移植 Rust 的 `Option` 和 `Result` 類型，適合習慣 Rust 語法的開發者。
+
+### ts-pattern
+
+[ts-pattern](https://github.com/gvergnaud/ts-pattern) 不是 Result 庫，但它提供的窮盡式模式匹配是 Result 的最佳搭檔，可與任何 Result 實作搭配使用：
+
+```ts
+import { match, P } from 'ts-pattern'
+
+const message = match(result)
+  .with({ success: true }, ({ value }) => `成功: ${value}`)
+  .with({ success: false }, ({ error }) => `失敗: ${error}`)
+  .exhaustive()
+```

@@ -1,0 +1,146 @@
+---
+id: "xY0bH2UkIr9ko03hQv9Ag"
+category: ["programming", "ddd"]
+related: ["sbldsvQi1K4JXOYBZhdrV", "BRPf9zYeqAD0Jgg3p-abG"]
+references: []
+order: 1
+
+meta:
+    title: "TypeScript 實踐 DDD 值對象：基於 Result 模式的 Gender 類型設計"
+    description: "本文以 Gender（性別）為例，深入探討如何在 TypeScript 中實踐 DDD 值對象模式。涵蓋智能枚舉設計、私有構造器、Result 模式防腐校驗，以及與資料庫表結構的映射策略，幫助你構建類型安全且富含領域行爲的值對象。"
+    author: "kai-orion"
+    keywords: [
+        "typescript",
+        "ddd",
+        "domain-driven-design",
+        "value-object",
+        "gender",
+        "smart-enum",
+        "result",
+        "result-pattern",
+        "type-safety",
+        "immutability",
+        "validation",
+        "railway-oriented-programming"
+    ]
+    publishedAt: 2026-7-14
+    createdAt: 2026-7-14
+    updatedAt: 2026-7-14
+    language: "zh_Hant"
+
+hasOverview: true
+overview: "探討如何在 TypeScript 中基於 Result 模式與 DDD 值對象概念設計 Gender 類型——從資料庫表映射、智能枚舉到私有構造器與防腐校驗的完整實踐。"
+
+status:
+    isDraft: false
+    isVisible: true
+    isFeatured: true
+
+hasCover: false
+cover:
+    image: null
+    alt: ""
+---
+
+# TypeScript 實踐 DDD 值對象：基於 Result 模式的 Gender 類型設計
+
+在領域驅動設計（DDD）中，「值對象（Value Object）」是構建領域模型的核心基石之一。本文將以 Gender（性別）為例，探討如何使用 TypeScript 實現一個具備類型安全、防腐校驗以及富含領域行為的「智能枚舉（Smart Enum）」值對象。
+
+## 为何不使用原始类型
+
+假設使用原始類型（例如 string 類型）會導致語義缺失、不受限的取值和不受控的行爲。假設 Gender 值對象與數據庫值映射無法對齊時，原始類型的弊端會立刻顯現（通常發生在數據庫表性別字段發生變化）。
+
+使用值對象構建 Gender 的優勢：
+
+- 不可變性
+- 數據校驗
+- 行爲封裝
+
+## 關鍵設計
+
+Gender 值對象對應數據庫中的一張表 `genders` ，表定義是：
+
+```sql
+create table `genders` (
+    `value`        varchar(32) primary key,
+    `display_name` varchar(64) not null
+);
+```
+
+Gender 值對象包含如下字段（對應 SQL Schema）：
+
+- value
+- displayName
+
+以及如下常用智能枚舉字段：
+
+- Male
+- Female
+- Other
+- Unknown
+
+期待用法：
+
+```ts
+// 通過智能枚舉獲取預定義數據
+const male = Gender.Male
+
+// 獲取 value 和 displayName 字段
+const maleValue = male.value
+const maleDisplayName = male.displayName
+```
+
+
+
+## 核心代碼實現
+
+Gender 采用標准的領域糢型設計模式（智能枚舉、私有構造器、Result 模式）。代碼預期合法取值被寫死為 Male, Female, Other, Unknown 。
+
+```ts
+export interface IGenderConstructorArgs {
+    readonly value: string
+    readonly displayName: string
+}
+
+export class Gender {
+
+    /* #region Properties */
+    public readonly value: string
+    public readonly displayName: string
+    /* #endregion */
+
+    /* #region Start Enums */
+    public static readonly Male = new Gender({ value: 'male', displayName: 'Male' })
+    public static readonly Female = new Gender({ value: 'female', displayName: 'Female' })
+    public static readonly Other = new Gender({ value: 'other', displayName: 'Other' })
+    public static readonly Unknown = new Gender({ value: 'unknown', displayName: 'Unknown' })
+    /* #endregion */
+
+    public static readonly All: readonly Gender[] = [
+        Gender.Male,
+        Gender.Female,
+        Gender.Other,
+        Gender.Unknown,
+    ]
+
+    /* #region Constructors */
+    private constructor(args: IGenderConstructorArgs) {
+        this.value = args.value
+        this.displayName = args.displayName
+    }
+    public static From(args: IGenderConstructorArgs): IResultOfT<Gender, GenderError> {
+        const match = Gender.All.find(g => g.value === args.value)
+        if (match) {
+            return ok(match)
+        }
+
+        return err(GenderError.InvalidValue(args.value))
+    }
+    /* #endregion */
+
+    /** Returns the human-readable display name (e.g. `"Male"`, `"Female"`). */
+    public toString(): string {
+        return this.displayName
+    }
+}
+```
