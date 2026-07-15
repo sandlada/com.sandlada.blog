@@ -57,23 +57,29 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
      *      collection: string
      *      data: {
      *          category: string[]
-     *          part: number
+     *          order: number
+     *          related: string[]
+     *          references: Array<{ id?: string; url?: string }>
      *          meta: {
      *              title: string
      *              author: string
      *              description: string
      *              keywords: Array<string>
-     *              publishTime: string
+     *              createdAt: Date
+     *              publishedAt: Date
+     *              updatedAt: Date
+     *              language: string
      *          }
      *          hasOverview: boolean
-     *          overview: string
+     *          overview: string | null
      *          status: {
      *              isDraft: boolean
      *              isVisible: boolean
      *              isFeatured: boolean
      *          }
+     *          hasCover: boolean
      *          cover: {
-     *              image: unknown
+     *              image: unknown | null
      *              alt: string | null
      *          }
      *      }
@@ -87,7 +93,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
          *      body: string
          *      collection: string
          *      data: {
-         *          id: string
          *          category: string[]
          *          order: number
          *          meta: {
@@ -109,7 +114,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
          *          }
          *          hasCover: boolean
          *          cover: {
-         *              image: unknown
+         *              image: unknown | null
          *              alt: string | null
          *          }
          *      }
@@ -208,7 +213,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
                             -1 ||
                         article.data.meta.author.indexOf(value) !== -1 ||
                         article.body.indexOf(value) !== -1 ||
-                        article.data.meta.publishTime.indexOf(value) !== -1
+                        article.data.meta.publishedAt.indexOf(value) !== -1
                     ) {
                         return true
                     }
